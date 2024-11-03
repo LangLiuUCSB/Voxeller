@@ -16,27 +16,24 @@ class VoxelGraph
     Node **node_map;
     BinaryMinHeap *open_set;
 
-    Node *source_node, *target_node, *current_node;
     size_t current_visit_id = 0;
 
     // Helper Functions
     u_int8_t hex_to_dec(char hex) const { return (hex <= '9') ? hex - '0' : hex - 'W'; }
 
-    bool set_source_node(Coordinate coordinate) { return (source_node = node_map[coordinate.x + x_limit * (coordinate.y + y_limit * coordinate.z)]); }
-    bool set_target_node(Coordinate coordinate) { return (target_node = node_map[coordinate.x + x_limit * (coordinate.y + y_limit * coordinate.z)]); }
+    bool is_out_of_bounds(Coordinate coordinate) const { return coordinate.x < 0 || coordinate.x >= x_limit ||
+                                                                coordinate.y < 0 || coordinate.y >= y_limit ||
+                                                                coordinate.z < 0 || coordinate.z >= z_limit; }
 
-    bool set_source_node_reverse(Coordinate coordinate) { return (source_node = node_map[coordinate.x + x_limit * (coordinate.y + y_limit * coordinate.z) - map_area]); }
-    bool set_target_node_reverse(Coordinate coordinate) { return (target_node = node_map[coordinate.x + x_limit * (coordinate.y + y_limit * coordinate.z) - map_area]); }
-
-    void set_as_visited(Node *adjacent_node) const;
-    void set_inverse_as_visited(Node *adjacent_node) const;
+    size_t coordinate_to_index(Coordinate coordinate) const { return coordinate.x + x_limit * (coordinate.y + y_limit * coordinate.z); }
 
 public:
     VoxelGraph(std::istream &stream);
     ~VoxelGraph();
 
     Path find_path(const Coordinate &source, const Coordinate &target);
-    Path find_path_reverse(const Coordinate &source, const Coordinate &target);
+    // Path find_path_reverse(const Coordinate &source, const Coordinate &target);
+    // Path find_path_bidirectional(const Coordinate &source, const Coordinate &target);
 };
 
 #endif

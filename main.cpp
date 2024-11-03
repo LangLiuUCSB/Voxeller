@@ -26,7 +26,7 @@ int main()
     stream.close();
 
     // set source and target coordinates
-    const Coordinate source(4, 2, 1), target(63, 41, 37);
+    const Coordinate source(4, 2, 1), target(64, 42, 36);
 
     // find path
     start = std::chrono::high_resolution_clock::now(); // TODO start chrono
@@ -48,7 +48,7 @@ int main()
     end = std::chrono::high_resolution_clock::now(); // TODO end chrono
     elapsed = end - start;
     std::cout << "Search time: " << elapsed.count() << " microseconds\n";
-
+    /*
     // reverse-find path
     start = std::chrono::high_resolution_clock::now(); // TODO start chrono
     try
@@ -67,7 +67,7 @@ int main()
     end = std::chrono::high_resolution_clock::now(); // TODO end chrono
     elapsed = end - start;
     std::cout << "Search time: " << elapsed.count() << " microseconds\n";
-
+    */
     // end program
     std::cout << std::endl;
     return 0;

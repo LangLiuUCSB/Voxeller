@@ -10,7 +10,7 @@ struct Node
 {
     Coordinate coordinate;
     std::vector<Node *> nexts;
-    Node *prev;
+    Node *previous;
     Move prior_move;
     size_t visit_id = 0;
     int cost_key;
