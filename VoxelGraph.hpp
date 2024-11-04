@@ -2,7 +2,6 @@
 #define VOXELGRAPH_HPP
 
 #include "Coordinate.hpp"
-#include "Path.hpp"
 #include "BinaryMinHeap.hpp"
 #include "Utils.hpp"
 #include "Errors.hpp"
@@ -14,7 +13,7 @@ class VoxelGraph
     size_t map_area, map_volume;
 
     Node **node_map;
-    BinaryMinHeap *open_set;
+    BinaryMinHeap *open_set1, *open_set2;
 
     size_t current_visit_id = 0;
 
@@ -31,9 +30,10 @@ public:
     VoxelGraph(std::istream &stream);
     ~VoxelGraph();
 
-    Path find_path(const Coordinate &source, const Coordinate &target);
-    // Path find_path_reverse(const Coordinate &source, const Coordinate &target);
-    // Path find_path_bidirectional(const Coordinate &source, const Coordinate &target);
+    std::string GBeFS(const Coordinate &source, const Coordinate &target);
+    std::string RGBeFS(const Coordinate &source, const Coordinate &target);
+    std::string BDGBeFS(const Coordinate &source, const Coordinate &target);
+    std::string EHBDGBeFS(const Coordinate &source, const Coordinate &target);
 };
 
 #endif

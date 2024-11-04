@@ -4,14 +4,13 @@
 #include <vector>
 
 #include "Coordinate.hpp"
-#include "Move.hpp"
 
 struct Node
 {
     Coordinate coordinate;
     std::vector<Node *> nexts;
     Node *previous;
-    Move prior_move;
+    char prior_move;
     size_t visit_id = 0;
     int cost_key;
     Node(Coordinate coordinate) : coordinate(coordinate) {}

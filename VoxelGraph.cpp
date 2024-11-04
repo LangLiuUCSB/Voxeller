@@ -1,6 +1,8 @@
 #include "VoxelGraph.hpp"
 
-#define help std::cout << "help VoxelGraph\n"
+#define PRINT std::cout <<
+#define NL '\n'
+#define HELP PRINT "HELP~VoxelGraph\n"
 
 #define VOID 7
 #define SOLID 4
@@ -19,28 +21,29 @@
 
 #define HAS_NEIGHBOR < 4
 
+#define IS_VISITED ->visit_id == current_visit_id
+
 /*
-TODO bidrectional search
 TODO fork-join parallelism
+TODO conneted components precomputation
 TODO path storage and subset search
 TODO beachmarking other types of heaps for open_set
-TODO fileread async
 TODO system dependent space optimization
+TODO fileread async
 */
 
-VoxelGraph::VoxelGraph(std::istream &stream)
+VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
 {
-    stream >> x_limit >> y_limit >> z_limit;
-    uint8_t schematic[(map_area = x_limit * y_limit)];
+    stream >> x_limit >> y_limit >> z_limit; // initialize world upper bounds
 
-    map_volume = map_area * z_limit;
-    node_map = new Node *[map_volume];
-    std::memset(node_map, 0, map_volume * sizeof(Node *)); // TODO change 0 to NULL
+    uint8_t schematic[(map_area = x_limit * y_limit)]; // initialize schematic
 
+    node_map = new Node *[map_volume = map_area * z_limit]; // initialize graph
+    std::memset(node_map, 0, map_volume * sizeof(Node *));  // TODO change 0 to NULL
+
+    // populate schematic
     std::string row;
     size_t schematic_index = 0;
-
-    // set up schematic lvl 0
     for (int y = 0; y < y_limit; ++y)
     {
         stream >> row;
@@ -48,8 +51,8 @@ VoxelGraph::VoxelGraph(std::istream &stream)
             for (uint8_t B : bit_mask)
                 schematic[schematic_index++] = (hex_to_dec(character) & B) ? SOLID : VOID;
     }
-    size_t current_index = map_area;
 
+    // helper lambda functions
     auto landing = [this](size_t index)
     {
         while (node_map[index] == nullptr)
@@ -62,7 +65,8 @@ VoxelGraph::VoxelGraph(std::istream &stream)
         node_map[to INVERSE]->nexts.push_back(node_map[from INVERSE]);
     };
 
-    // populate node_map
+    // populate graph
+    size_t current_index = map_area;
     for (int z = 1; z < z_limit; ++z)
     {
         schematic_index = 0;
@@ -136,7 +140,10 @@ VoxelGraph::VoxelGraph(std::istream &stream)
             }
         }
     }
-    open_set = new BinaryMinHeap(map_volume);
+
+    // initialize open sets
+    open_set1 = new BinaryMinHeap(map_volume);
+    open_set2 = new BinaryMinHeap(map_volume);
 }
 
 VoxelGraph::~VoxelGraph()
@@ -145,10 +152,11 @@ VoxelGraph::~VoxelGraph()
         if (node_map[i])
             delete node_map[i];
     delete[] node_map;
-    delete open_set;
+    delete open_set1;
+    delete open_set2;
 }
 
-Path VoxelGraph::find_path(const Coordinate &source, const Coordinate &target)
+std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
     if (is_out_of_bounds(source))
@@ -159,7 +167,7 @@ Path VoxelGraph::find_path(const Coordinate &source, const Coordinate &target)
 
     // trivial case
     if (source == target)
-        return Path(0);
+        return "";
 
     // check target validity
     if (is_out_of_bounds(target))
@@ -169,271 +177,376 @@ Path VoxelGraph::find_path(const Coordinate &source, const Coordinate &target)
         throw InvalidCoordinate(target);
 
     // configure current search setup
-    target_node->cost_key = 0;
-    auto set_cost = [target](Node *n)
-    {
-        n->cost_key = abs(target.x - n->coordinate.x) +
-                      abs(target.y - n->coordinate.y) +
-                      abs(target.z - n->coordinate.z);
-    };
-    set_cost(source_node);
     source_node->visit_id = ++current_visit_id;
+    target_node->cost_key = 0;
     Node *current_node = source_node;
-    auto set_as_visited = [set_cost, &current_node](Node *adjacent_node)
+    auto set_as_visited = [target, &current_node](Node *neighbor_node)
     {
-        set_cost(adjacent_node);
-        adjacent_node->previous = current_node;
-        adjacent_node->prior_move =
-            (adjacent_node->coordinate.x - current_node->coordinate.x)
-                ? ((adjacent_node->coordinate.x - current_node->coordinate.x == 1)
-                       ? Move::EAST
-                       : Move::WEST)
-                : ((adjacent_node->coordinate.y - current_node->coordinate.y == 1)
-                       ? Move::SOUTH
-                       : Move::NORTH);
-        adjacent_node->visit_id = current_node->visit_id;
+        neighbor_node->visit_id = current_node->visit_id;
+        neighbor_node->previous = current_node;
+        neighbor_node->prior_move =
+            (neighbor_node->coordinate.x - current_node->coordinate.x)
+                ? ((neighbor_node->coordinate.x - current_node->coordinate.x == 1) ? 'e' : 'w')
+                : ((neighbor_node->coordinate.y - current_node->coordinate.y == 1) ? 's' : 'n');
+        neighbor_node->cost_key = target.manhattan_distance(neighbor_node->coordinate);
     };
 
     // track possible starting neighbors
-    for (Node *adjacent_node : source_node->nexts)
+    for (Node *neighbor_node : source_node->nexts)
     {
-        set_as_visited(adjacent_node);
-        open_set->push(adjacent_node);
+        set_as_visited(neighbor_node);
+        open_set1->push(neighbor_node);
     }
 
     // search path to target
-    while (!open_set->empty())
+    size_t i = 0; // TODO
+    while (!open_set1->empty())
     {
-        current_node = open_set->pop();
+        current_node = open_set1->pop();
 
         // check if target has been reached
         if (current_node == target_node)
         {
-            open_set->clear();
-
-            // find path length
-            size_t path_length = 0;
-            for (; current_node != source_node;
-                 current_node = current_node->previous)
-                ++path_length;
-
-            // retrace path
-            Path path(path_length);
-            current_node = target_node;
-            for (; current_node != source_node;
-                 current_node = current_node->previous)
-                path.retrace(current_node->prior_move);
-
+            PRINT "Voxelgraph: This GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            open_set1->clear();
+            std::string path;
+            while (current_node != source_node)
+            {
+                path.push_back(current_node->prior_move);
+                current_node = current_node->previous;
+            }
+            std::reverse(path.begin(), path.end());
             return path;
         }
+        ++i;
 
         // track possible new neighbors
-        for (Node *adjacent_node : current_node->nexts)
+        for (Node *neighbor_node : current_node->nexts)
         {
-            if (adjacent_node->visit_id != current_visit_id)
-            {
-                set_as_visited(adjacent_node);
-                open_set->push(adjacent_node);
-            }
+            if (neighbor_node IS_VISITED)
+                continue;
+            set_as_visited(neighbor_node);
+            open_set1->push(neighbor_node);
         }
     }
 
     // when no path is found
-    open_set->clear();
+    open_set1->clear();
     throw Untraversable(source, target);
 }
-/*
-void VoxelGraph::set_inverse_as_visited(Node *adjacent_node) const
-{
-    adjacent_node->visit_id = current_visit_id;
-    adjacent_node->previous = current_node;
-    adjacent_node->prior_move =
-        (adjacent_node->coordinate.x - current_node->coordinate.x)
-            ? ((adjacent_node->coordinate.x - current_node->coordinate.x == 1)
-                   ? Move::WEST
-                   : Move::EAST)
-            : ((adjacent_node->coordinate.y - current_node->coordinate.y == 1)
-                   ? Move::NORTH
-                   : Move::SOUTH);
-}
 
-Path VoxelGraph::find_path_reverse(const Coordinate &source, const Coordinate &target)
+std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
-    if (target.x < 0 || target.x >= x_limit ||
-        target.y < 0 || target.y >= y_limit ||
-        target.z < 0 || target.z >= z_limit ||
-        !set_source_node_reverse(target))
+    if (is_out_of_bounds(target))
+        throw InvalidCoordinate(target);
+    Node *source_node = node_map[coordinate_to_index(target) INVERSE];
+    if (source_node == nullptr)
         throw InvalidCoordinate(target);
 
     // trivial case
     if (source == target)
-        return Path(0);
+        return "";
 
     // check target validity
-    if (source.x < 0 || source.x >= x_limit ||
-        source.y < 0 || source.y >= y_limit ||
-        source.z < 0 || source.z >= z_limit ||
-        !set_target_node_reverse(source))
+    if (is_out_of_bounds(source))
+        throw InvalidCoordinate(source);
+    Node *target_node = node_map[coordinate_to_index(source) INVERSE];
+    if (target_node == nullptr)
         throw InvalidCoordinate(source);
 
     // configure current search setup
     source_node->visit_id = ++current_visit_id;
     target_node->cost_key = 0;
-    auto lambda_set_cost = [source](Node *n)
-    { n->cost_key = abs(source.x - n->coordinate.x) +
-                    abs(source.y - n->coordinate.y) +
-                    abs(source.z - n->coordinate.z); };
-    lambda_set_cost(source_node);
-    current_node = source_node;
-
-    // track possible starting neighbors
-    for (Node *adjacent_node : source_node->nexts)
+    Node *current_node = source_node;
+    auto set_as_visited = [source, &current_node](Node *neighbor_node)
     {
-        // configure current neighbor
-        lambda_set_cost(adjacent_node);
-        set_inverse_as_visited(adjacent_node);
-
-        // track as searchable
-        open_set->push(adjacent_node);
-    }
-
-    // search path to target
-    while (!open_set->empty())
-    {
-        current_node = open_set->pop();
-        // check if target has been reached
-        if (current_node == target_node)
-        {
-            open_set->clear();
-
-            // find path length
-            size_t path_length = 0;
-            for (; current_node != source_node; current_node = current_node->previous)
-                ++path_length;
-
-            // retrace path
-            Path path(path_length);
-            current_node = target_node;
-            for (; current_node != source_node; current_node = current_node->previous)
-                path.retrace(current_node->prior_move);
-
-            return path;
-        }
-
-        // track possible new neighbors
-        for (Node *adjacent_node : current_node->nexts)
-        {
-            if (adjacent_node->visit_id != current_visit_id)
-            {
-                // configure current neighbor
-                lambda_set_cost(adjacent_node);
-                set_inverse_as_visited(adjacent_node);
-
-                // track as searchable
-                open_set->push(adjacent_node);
-            }
-        }
-    }
-
-    open_set->clear();
-    throw Untraversable(source, target);
-}
-
-Path VoxelGraph::find_path_bidirectional(const Coordinate &source, const Coordinate &target)
-{
-    // check source validity
-    if (source.x < 0 || source.x >= x_limit ||
-        source.y < 0 || source.y >= y_limit ||
-        source.z < 0 || source.z >= z_limit ||
-        !set_source_node(source))
-        throw InvalidCoordinate(source);
-
-    // trivial case
-    if (source == target)
-        return Path(0);
-
-    // check target validity
-    if (target.x < 0 || target.x >= x_limit ||
-        target.y < 0 || target.y >= y_limit ||
-        target.z < 0 || target.z >= z_limit ||
-        !set_target_node(target))
-        throw InvalidCoordinate(target);
-
-    // configure current search setup
-    source_node->visit_id = ++current_visit_id;
-    target_node->cost_key = 0;
-    auto lambda_set_cost = [target](Node *n)
-    {
-        n->cost_key = abs(target.x - n->coordinate.x) +
-                      abs(target.y - n->coordinate.y) +
-                      abs(target.z - n->coordinate.z);
+        neighbor_node->visit_id = current_node->visit_id;
+        neighbor_node->previous = current_node;
+        neighbor_node->prior_move =
+            (neighbor_node->coordinate.x - current_node->coordinate.x)
+                ? ((neighbor_node->coordinate.x - current_node->coordinate.x == -1) ? 'e' : 'w')
+                : ((neighbor_node->coordinate.y - current_node->coordinate.y == -1) ? 's' : 'n');
+        neighbor_node->cost_key = source.manhattan_distance(neighbor_node->coordinate);
     };
-    lambda_set_cost(source_node);
-    current_node = source_node;
 
     // track possible starting neighbors
-    for (Node *adjacent_node : source_node->nexts)
+    for (Node *neighbor_node : source_node->nexts)
     {
-        // configure current neighbor
-        set_as_visited(adjacent_node);
-        lambda_set_cost(adjacent_node);
-
-        // track as searchable
-        open_set->push(adjacent_node);
+        set_as_visited(neighbor_node);
+        open_set1->push(neighbor_node);
     }
 
     // search path to target
-    while (!open_set->empty())
+    size_t i = 0; // TODO
+    while (!open_set1->empty())
     {
-        current_node = open_set->pop();
-        if (current_node->nexts.size() > 4)
-        {
-            for (auto n : current_node->nexts)
-            {
-                std::cout << n->coordinate;
-            }
+        current_node = open_set1->pop();
 
-            std::cout << current_node->coordinate << "\n";
-        }
         // check if target has been reached
         if (current_node == target_node)
         {
-            open_set->clear();
-
-            // find path length
-            size_t path_length = 0;
-            for (; current_node != source_node;
-                 current_node = current_node->previous)
-                ++path_length;
-
-            // retrace path
-            Path path(path_length);
-            current_node = target_node;
-            for (; current_node != source_node;
-                 current_node = current_node->previous)
-                path.retrace(current_node->prior_move);
-
+            PRINT "Voxelgraph: This Reverse GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            open_set1->clear();
+            std::string path;
+            while (current_node != source_node)
+            {
+                path.push_back(current_node->prior_move);
+                current_node = current_node->previous;
+            }
             return path;
         }
+        ++i; // TODO
 
         // track possible new neighbors
-        for (Node *adjacent_node : current_node->nexts)
+        for (Node *neighbor_node : current_node->nexts)
         {
-            if (adjacent_node->visit_id != current_visit_id)
-            {
-                // configure current neighbor
-                set_as_visited(adjacent_node);
-                lambda_set_cost(adjacent_node);
-
-                // track as searchable
-                open_set->push(adjacent_node);
-            }
+            if (neighbor_node IS_VISITED)
+                continue;
+            set_as_visited(neighbor_node);
+            open_set1->push(neighbor_node);
         }
     }
 
     // when no path is found
-    open_set->clear();
+    open_set1->clear();
     throw Untraversable(source, target);
 }
-*/
+
+std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
+{
+    // check source validity
+    if (is_out_of_bounds(source))
+        throw InvalidCoordinate(source);
+    Node *source_node1 = node_map[coordinate_to_index(source)];
+    if (source_node1 == nullptr)
+        throw InvalidCoordinate(source);
+
+    // trivial case
+    if (source == target)
+        return "";
+
+    // check target validity
+    if (is_out_of_bounds(target))
+        throw InvalidCoordinate(target);
+    Node *target_node1 = node_map[coordinate_to_index(target)];
+    if (target_node1 == nullptr)
+        throw InvalidCoordinate(target);
+
+    // configure current search setup
+    source_node1->visit_id = ++current_visit_id;
+    target_node1->cost_key = 0;
+
+    Node *source_node2 = node_map[coordinate_to_index(target) INVERSE];
+    Node *target_node2 = node_map[coordinate_to_index(source) INVERSE];
+
+    source_node2->visit_id = current_visit_id;
+    target_node2->cost_key = 0;
+
+    Node *current_node1 = source_node1;
+    Node *current_node2 = source_node2;
+
+    auto set_as_visited1 = [target, &current_node1](Node *neighbor_node)
+    {
+        neighbor_node->visit_id = current_node1->visit_id;
+        neighbor_node->previous = current_node1;
+        neighbor_node->prior_move =
+            (neighbor_node->coordinate.x - current_node1->coordinate.x)
+                ? ((neighbor_node->coordinate.x - current_node1->coordinate.x == 1) ? 'e' : 'w')
+                : ((neighbor_node->coordinate.y - current_node1->coordinate.y == 1) ? 's' : 'n');
+        neighbor_node->cost_key = target.manhattan_distance(neighbor_node->coordinate);
+    };
+    auto set_as_visited2 = [source, &current_node2](Node *neighbor_node)
+    {
+        neighbor_node->visit_id = current_node2->visit_id;
+        neighbor_node->previous = current_node2;
+        neighbor_node->prior_move =
+            (neighbor_node->coordinate.x - current_node2->coordinate.x)
+                ? ((neighbor_node->coordinate.x - current_node2->coordinate.x == -1) ? 'e' : 'w')
+                : ((neighbor_node->coordinate.y - current_node2->coordinate.y == -1) ? 's' : 'n');
+        neighbor_node->cost_key = source.manhattan_distance(neighbor_node->coordinate);
+    };
+
+    // track possible starting neighbors
+    for (Node *neighbor_node : source_node1->nexts)
+    {
+        set_as_visited1(neighbor_node);
+        open_set1->push(neighbor_node);
+    }
+    for (Node *neighbor_node : source_node2->nexts)
+    {
+        set_as_visited2(neighbor_node);
+        open_set2->push(neighbor_node);
+    }
+
+    // search path to target
+    size_t i = 0; // TODO
+    while (!open_set1->empty())
+    {
+        current_node1 = open_set1->pop();
+        current_node2 = open_set2->pop();
+
+        // check if target has been reached
+        if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
+        {
+            PRINT "Voxelgraph: This Evolving-Heuristic Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                                               // TODO
+            open_set1->clear();
+            std::string path;
+            current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
+            while (current_node1 != source_node1)
+            {
+                path.push_back(current_node1->prior_move);
+                current_node1 = current_node1->previous;
+            }
+            std::reverse(path.begin(), path.end());
+            while (current_node2 != source_node2)
+            {
+                path.push_back(current_node2->prior_move);
+                current_node2 = current_node2->previous;
+            }
+            return path;
+        }
+        ++ ++i;
+
+        // track possible new neighbors
+        for (Node *neighbor_node : current_node1->nexts)
+        {
+            if (neighbor_node->visit_id != current_visit_id)
+            {
+                set_as_visited1(neighbor_node);
+                open_set1->push(neighbor_node);
+            }
+        }
+        for (Node *neighbor_node : current_node2->nexts)
+        {
+            if (neighbor_node IS_VISITED)
+                continue;
+            set_as_visited2(neighbor_node);
+            open_set2->push(neighbor_node);
+        }
+    }
+
+    // when no path is found
+    open_set1->clear();
+    throw Untraversable(source, target);
+}
+
+std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &target)
+{
+    // check source validity
+    if (is_out_of_bounds(source))
+        throw InvalidCoordinate(source);
+    Node *source_node1 = node_map[coordinate_to_index(source)];
+    if (source_node1 == nullptr)
+        throw InvalidCoordinate(source);
+
+    // trivial case
+    if (source == target)
+        return "";
+
+    // check target validity
+    if (is_out_of_bounds(target))
+        throw InvalidCoordinate(target);
+    Node *target_node1 = node_map[coordinate_to_index(target)];
+    if (target_node1 == nullptr)
+        throw InvalidCoordinate(target);
+
+    // configure current search setup
+    source_node1->visit_id = ++current_visit_id;
+    target_node1->cost_key = 0;
+
+    Node *source_node2 = node_map[coordinate_to_index(target) INVERSE];
+    Node *target_node2 = node_map[coordinate_to_index(source) INVERSE];
+
+    source_node2->visit_id = current_visit_id;
+    target_node2->cost_key = 0;
+
+    Node *current_node1 = source_node1;
+    Node *current_node2 = source_node2;
+
+    auto set_as_visited1 = [&current_node2, &current_node1](Node *neighbor_node)
+    {
+        neighbor_node->visit_id = current_node1->visit_id;
+        neighbor_node->previous = current_node1;
+        neighbor_node->prior_move =
+            (neighbor_node->coordinate.x - current_node1->coordinate.x)
+                ? ((neighbor_node->coordinate.x - current_node1->coordinate.x == 1) ? 'e' : 'w')
+                : ((neighbor_node->coordinate.y - current_node1->coordinate.y == 1) ? 's' : 'n');
+        neighbor_node->cost_key = current_node2->coordinate.manhattan_distance(neighbor_node->coordinate);
+    };
+    auto set_as_visited2 = [&current_node1, &current_node2](Node *neighbor_node)
+    {
+        neighbor_node->visit_id = current_node2->visit_id;
+        neighbor_node->previous = current_node2;
+        neighbor_node->prior_move =
+            (neighbor_node->coordinate.x - current_node2->coordinate.x)
+                ? ((neighbor_node->coordinate.x - current_node2->coordinate.x == -1) ? 'e' : 'w')
+                : ((neighbor_node->coordinate.y - current_node2->coordinate.y == -1) ? 's' : 'n');
+        neighbor_node->cost_key = current_node2->coordinate.manhattan_distance(neighbor_node->coordinate);
+    };
+
+    // track possible starting neighbors
+    for (Node *neighbor_node : source_node1->nexts)
+    {
+        set_as_visited1(neighbor_node);
+        open_set1->push(neighbor_node);
+    }
+    for (Node *neighbor_node : source_node2->nexts)
+    {
+        set_as_visited2(neighbor_node);
+        open_set2->push(neighbor_node);
+    }
+
+    // search path to target
+    size_t i = 0; // TODO
+    while (!open_set1->empty())
+    {
+        current_node1 = open_set1->pop();
+        current_node2 = open_set2->pop();
+
+        // check if target has been reached
+        if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
+        {
+            PRINT "Voxelgraph: This Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                            // TODO
+            open_set1->clear();
+            std::string path;
+            current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
+            while (current_node1 != source_node1)
+            {
+                path.push_back(current_node1->prior_move);
+                current_node1 = current_node1->previous;
+            }
+            std::reverse(path.begin(), path.end());
+            while (current_node2 != source_node2)
+            {
+                path.push_back(current_node2->prior_move);
+                current_node2 = current_node2->previous;
+            }
+            return path;
+        }
+        ++ ++i;
+
+        // track possible new neighbors
+        for (Node *neighbor_node : current_node1->nexts)
+        {
+            if (neighbor_node->visit_id != current_visit_id)
+            {
+                set_as_visited1(neighbor_node);
+                open_set1->push(neighbor_node);
+            }
+        }
+        for (Node *neighbor_node : current_node2->nexts)
+        {
+            if (neighbor_node IS_VISITED)
+                continue;
+            set_as_visited2(neighbor_node);
+            open_set2->push(neighbor_node);
+        }
+    }
+
+    // when no path is found
+    open_set1->clear();
+    throw Untraversable(source, target);
+}
