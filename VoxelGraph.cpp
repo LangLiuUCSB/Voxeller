@@ -389,8 +389,8 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
         // check if target has been reached
         if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
         {
-            PRINT "Voxelgraph: This Evolving-Heuristic Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
-            PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                                               // TODO
+            PRINT "Voxelgraph: This Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                            // TODO
             open_set1->clear();
             std::string path;
             current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
@@ -508,8 +508,8 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
         // check if target has been reached
         if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
         {
-            PRINT "Voxelgraph: This Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
-            PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                            // TODO
+            PRINT "Voxelgraph: This Evolving-Heuristic Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                                               // TODO
             open_set1->clear();
             std::string path;
             current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
