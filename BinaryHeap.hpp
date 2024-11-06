@@ -51,10 +51,7 @@ template <typename T, typename Comparator>
 void BinaryHeap<T, Comparator>::push(T t)
 {
     if (count == capacity)
-    {
-        std::cout << "Error: BinaryHeap overflow caused by push\n";
-        return;
-    }
+        throw std::out_of_range("Error: BinaryHeap overflow caused by push\n");
     heap_array[count] = t;
     size_t current_index = count++;
     if (current_index == 0)
@@ -71,6 +68,8 @@ void BinaryHeap<T, Comparator>::push(T t)
 template <typename T, typename Comparator>
 T BinaryHeap<T, Comparator>::pop()
 {
+    if (count == 0)
+        throw std::out_of_range("Error: BinaryHeap is empty and cannot be popped\n");
     T popped_element = heap_array[0];
     heap_array[0] = heap_array[--count];
     min_heapify(0);
