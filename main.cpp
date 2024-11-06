@@ -65,7 +65,7 @@ double average(const std::vector<double> &vec)
 TravelPlan pop_random(std::vector<TravelPlan> &v)
 {
     if (v.empty())
-        throw std::out_of_range("Cannot pop from an empty vector.");
+        throw std::out_of_range("Cannot pop from an empty vector\n");
     std::srand(static_cast<unsigned int>(std::time(0)));
     int random_index = std::rand() % v.size();
     TravelPlan popped_element = std::move(v[random_index]);
@@ -133,23 +133,24 @@ int main()
     for (size_t i = 0; i < num_travel_plans; ++i)
     {
         TravelPlan tp = pop_random(travel_plans);
-        search_times.emplace_back(get_time(vg, &VoxelGraph::RGBeFS, tp.source, tp.target));
+        search_times.emplace_back(get_time(vg, &VoxelGraph::GBeFS, tp.source, tp.target));
     }
     PRINT "average search time of basic GBeFS: " << average(search_times) << " microseconds\n";
-
     /*
     // set source and target coordinates
     const Coordinate source(4, 2, 1), target(64, 42, 36);
 
     // find path
     chronometrize(vg, &VoxelGraph::GBeFS, source, target);
-    chronometrize(vg, &VoxelGraph::RGBeFS, source, target);
-    chronometrize(vg, &VoxelGraph::BDGBeFS, source, target); // TODO Error: BinaryHeap overflow caused by push
-    chronometrize(vg, &VoxelGraph::EHBDGBeFS, source, target); // TODO needs overhaul
+    chronometrize(vg, &VoxelGraph::R-GBeFS, source, target); // roughly 7% faster than basic non-reverse GBeFS
+    chronometrize(vg, &VoxelGraph::BD-GBeFS, source, target); // TODO Error: BinaryHeap overflow caused by push
+    chronometrize(vg, &VoxelGraph::EH-BD-GBeFS, source, target); // TODO needs overhaul
     */
     return 0;
 }
 /*
-GBeFS 128.983
-RGBeFS 122.934
+GBeFS  151.141 150.517 150.468 150.587 150.661
+        151.260 150.673 150.798 150.301 150.481
+RGBeFS  139.197 139.096 138.942 139.606 139.778
+        139.976 138.997 139.728 141.003 140.184
 */
