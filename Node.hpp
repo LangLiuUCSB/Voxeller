@@ -14,7 +14,11 @@ struct Node
     size_t visit_id = 0;
     int cost_key;
     Node(Coordinate coordinate) : coordinate(coordinate) {}
-    bool operator<(const Node &other) const { return cost_key < other.cost_key; }
+};
+
+struct NodePtrMinHeapComparator
+{
+    bool operator()(Node *a, Node *b) { return a->cost_key > b->cost_key; }
 };
 
 #endif

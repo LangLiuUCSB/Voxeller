@@ -24,7 +24,8 @@ $(TARGET): $(OBJS)
 run: $(TARGET)
 	./main
 
-# leaks --atExit -- ./main
+leaks: $(TARGET)
+	leaks --atExit -- ./main
 
 # Clean up object files and executable
 clean:

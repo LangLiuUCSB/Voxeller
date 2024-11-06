@@ -24,10 +24,12 @@
 #define IS_VISITED ->visit_id == current_visit_id
 
 /*
+TODO random source-target pair generator
+TODO evolving-heuristic dual open set
 TODO fork-join parallelism
 TODO conneted components precomputation
 TODO path storage and subset search
-TODO beachmarking other types of heaps for open_set
+TODO benchmarking other types of heaps for open set
 TODO system dependent space optimization
 TODO fileread async
 */
@@ -39,7 +41,7 @@ VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
     uint8_t schematic[(map_area = x_limit * y_limit)]; // initialize schematic
 
     node_map = new Node *[map_volume = map_area * z_limit]; // initialize graph
-    std::memset(node_map, 0, map_volume * sizeof(Node *));  // TODO change 0 to NULL
+    std::memset(node_map, 0, map_volume * sizeof(Node *));
 
     // populate schematic
     std::string row;
@@ -142,8 +144,8 @@ VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
     }
 
     // initialize open sets
-    open_set1 = new BinaryMinHeap(map_volume);
-    open_set2 = new BinaryMinHeap(map_volume);
+    open_set1 = new BinaryHeap<Node *, NodePtrMinHeapComparator>(map_volume >> 3, NodePtrMinHeapComparator());
+    open_set2 = new BinaryHeap<Node *, NodePtrMinHeapComparator>(map_volume >> 3, NodePtrMinHeapComparator());
 }
 
 VoxelGraph::~VoxelGraph()
@@ -191,7 +193,7 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
         neighbor_node->cost_key = target.manhattan_distance(neighbor_node->coordinate);
     };
 
-    // track possible starting neighbors
+    // track starting neighbors
     for (Node *neighbor_node : source_node->nexts)
     {
         set_as_visited(neighbor_node);
@@ -220,7 +222,7 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
         }
         ++i;
 
-        // track possible new neighbors
+        // track new neighbors
         for (Node *neighbor_node : current_node->nexts)
         {
             if (neighbor_node IS_VISITED)
@@ -270,7 +272,7 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
         neighbor_node->cost_key = source.manhattan_distance(neighbor_node->coordinate);
     };
 
-    // track possible starting neighbors
+    // track starting neighbors
     for (Node *neighbor_node : source_node->nexts)
     {
         set_as_visited(neighbor_node);
@@ -298,7 +300,7 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
         }
         ++i; // TODO
 
-        // track possible new neighbors
+        // track new neighbors
         for (Node *neighbor_node : current_node->nexts)
         {
             if (neighbor_node IS_VISITED)
@@ -367,7 +369,7 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
         neighbor_node->cost_key = source.manhattan_distance(neighbor_node->coordinate);
     };
 
-    // track possible starting neighbors
+    // track starting neighbors
     for (Node *neighbor_node : source_node1->nexts)
     {
         set_as_visited1(neighbor_node);
@@ -407,16 +409,15 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
             }
             return path;
         }
-        ++ ++i;
+        ++ ++i; // TODO
 
-        // track possible new neighbors
+        // track new neighbors
         for (Node *neighbor_node : current_node1->nexts)
         {
-            if (neighbor_node->visit_id != current_visit_id)
-            {
-                set_as_visited1(neighbor_node);
-                open_set1->push(neighbor_node);
-            }
+            if (neighbor_node IS_VISITED)
+                continue;
+            set_as_visited1(neighbor_node);
+            open_set1->push(neighbor_node);
         }
         for (Node *neighbor_node : current_node2->nexts)
         {
@@ -483,10 +484,10 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
             (neighbor_node->coordinate.x - current_node2->coordinate.x)
                 ? ((neighbor_node->coordinate.x - current_node2->coordinate.x == -1) ? 'e' : 'w')
                 : ((neighbor_node->coordinate.y - current_node2->coordinate.y == -1) ? 's' : 'n');
-        neighbor_node->cost_key = current_node2->coordinate.manhattan_distance(neighbor_node->coordinate);
+        neighbor_node->cost_key = current_node1->coordinate.manhattan_distance(neighbor_node->coordinate);
     };
 
-    // track possible starting neighbors
+    // track starting neighbors
     for (Node *neighbor_node : source_node1->nexts)
     {
         set_as_visited1(neighbor_node);
@@ -528,14 +529,13 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
         }
         ++ ++i;
 
-        // track possible new neighbors
+        // track new neighbors
         for (Node *neighbor_node : current_node1->nexts)
         {
-            if (neighbor_node->visit_id != current_visit_id)
-            {
-                set_as_visited1(neighbor_node);
-                open_set1->push(neighbor_node);
-            }
+            if (neighbor_node IS_VISITED)
+                continue;
+            set_as_visited1(neighbor_node);
+            open_set1->push(neighbor_node);
         }
         for (Node *neighbor_node : current_node2->nexts)
         {
