@@ -32,10 +32,10 @@ void chronometrize(VoxelGraph &vg,
     PRINT "Search time: " << elapsed.count() << " microseconds.\nPath: " << path << ".\nPath length: " << path.size() << " steps.\n\n";
 }
 
-double time(VoxelGraph &vg,
-            std::string (VoxelGraph::*f_ptr)(const Coordinate &source, const Coordinate &target),
-            const Coordinate &source,
-            const Coordinate &target)
+double get_time(VoxelGraph &vg,
+                std::string (VoxelGraph::*f_ptr)(const Coordinate &source, const Coordinate &target),
+                const Coordinate &source,
+                const Coordinate &target)
 {
     std::string path;
     auto start = std::chrono::high_resolution_clock::now();
@@ -59,8 +59,19 @@ double average(const std::vector<double> &vec)
 {
     if (vec.empty())
         return 0.0;
-    double sum = std::accumulate(vec.begin(), vec.end(), 0.0);
-    return sum / vec.size();
+    return std::accumulate(vec.begin(), vec.end(), 0.0) / vec.size();
+}
+
+TravelPlan pop_random(std::vector<TravelPlan> &v)
+{
+    if (v.empty())
+        throw std::out_of_range("Cannot pop from an empty vector.");
+    std::srand(static_cast<unsigned int>(std::time(0)));
+    int random_index = std::rand() % v.size();
+    TravelPlan popped_element = std::move(v[random_index]);
+    std::swap(v[random_index], v.back());
+    v.pop_back();
+    return popped_element;
 }
 
 int main()
@@ -118,9 +129,11 @@ int main()
 
     // algorithm benchmarking
     std::vector<double> search_times;
-    for (TravelPlan tp : travel_plans)
+    size_t num_travel_plans = travel_plans.size();
+    for (size_t i = 0; i < num_travel_plans; ++i)
     {
-        search_times.emplace_back(time(vg, &VoxelGraph::RGBeFS, tp.source, tp.target));
+        TravelPlan tp = pop_random(travel_plans);
+        search_times.emplace_back(get_time(vg, &VoxelGraph::RGBeFS, tp.source, tp.target));
     }
     PRINT "average search time of basic GBeFS: " << average(search_times) << " microseconds\n";
 

@@ -187,13 +187,11 @@ std::vector<TravelPlan> VoxelGraph::find_all_travel_plans(size_t minimum_distanc
     std::vector<TravelPlan> travel_plans;
     for (size_t i = map_area; i < map_volume; ++i)
     {
-        if (node_map[i] != nullptr &&
-            i == coordinate_to_index(node_map[i]->coordinate))
+        if (node_map[i] != nullptr && i == coordinate_to_index(node_map[i]->coordinate))
         {
             for (size_t j = map_area; j < map_volume; ++j)
             {
-                if (node_map[j] != nullptr &&
-                    j == coordinate_to_index(node_map[j]->coordinate) &&
+                if (node_map[j] != nullptr && j == coordinate_to_index(node_map[j]->coordinate) &&
                     node_map[i]->coordinate.manhattan_distance(node_map[j]->coordinate) >= minimum_distance)
                 {
                     travel_plans.emplace_back(node_map[i]->coordinate, node_map[j]->coordinate);
@@ -207,7 +205,7 @@ std::vector<TravelPlan> VoxelGraph::find_all_travel_plans(size_t minimum_distanc
 std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
-    if (is_out_of_bounds(source))
+    if (not_in_bounds(source))
         throw InvalidCoordinate(source);
     Node *source_node = node_map[coordinate_to_index(source)];
     if (source_node == nullptr)
@@ -218,7 +216,7 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
         return "";
 
     // check target validity
-    if (is_out_of_bounds(target))
+    if (not_in_bounds(target))
         throw InvalidCoordinate(target);
     Node *target_node = node_map[coordinate_to_index(target)];
     if (target_node == nullptr)
@@ -247,7 +245,6 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
     }
 
     // search path to target
-    size_t i = 0; // TODO
     while (!open_set1->empty())
     {
         current_node = open_set1->pop();
@@ -266,7 +263,6 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
             std::reverse(path.begin(), path.end());
             return path;
         }
-        ++i;
 
         // track new neighbors
         for (Node *neighbor_node : current_node->nexts)
@@ -286,7 +282,7 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
 std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
-    if (is_out_of_bounds(target))
+    if (not_in_bounds(target))
         throw InvalidCoordinate(target);
     Node *source_node = node_map[coordinate_to_index(target) INVERSE];
     if (source_node == nullptr)
@@ -297,7 +293,7 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
         return "";
 
     // check target validity
-    if (is_out_of_bounds(source))
+    if (not_in_bounds(source))
         throw InvalidCoordinate(source);
     Node *target_node = node_map[coordinate_to_index(source) INVERSE];
     if (target_node == nullptr)
@@ -326,7 +322,6 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
     }
 
     // search path to target
-    size_t i = 0; // TODO
     while (!open_set1->empty())
     {
         current_node = open_set1->pop();
@@ -344,7 +339,6 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
             }
             return path;
         }
-        ++i; // TODO
 
         // track new neighbors
         for (Node *neighbor_node : current_node->nexts)
@@ -364,7 +358,7 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
 std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
-    if (is_out_of_bounds(source))
+    if (not_in_bounds(source))
         throw InvalidCoordinate(source);
     Node *source_node1 = node_map[coordinate_to_index(source)];
     if (source_node1 == nullptr)
@@ -375,7 +369,7 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
         return "";
 
     // check target validity
-    if (is_out_of_bounds(target))
+    if (not_in_bounds(target))
         throw InvalidCoordinate(target);
     Node *target_node1 = node_map[coordinate_to_index(target)];
     if (target_node1 == nullptr)
@@ -428,7 +422,6 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
     }
 
     // search path to target
-    size_t i = 0; // TODO
     while (!open_set1->empty())
     {
         current_node1 = open_set1->pop();
@@ -455,7 +448,6 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
             }
             return path;
         }
-        ++ ++i; // TODO
 
         // track new neighbors
         for (Node *neighbor_node : current_node1->nexts)
@@ -482,7 +474,7 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
 std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
-    if (is_out_of_bounds(source))
+    if (not_in_bounds(source))
         throw InvalidCoordinate(source);
     Node *source_node1 = node_map[coordinate_to_index(source)];
     if (source_node1 == nullptr)
@@ -493,7 +485,7 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
         return "";
 
     // check target validity
-    if (is_out_of_bounds(target))
+    if (not_in_bounds(target))
         throw InvalidCoordinate(target);
     Node *target_node1 = node_map[coordinate_to_index(target)];
     if (target_node1 == nullptr)
@@ -546,7 +538,6 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
     }
 
     // search path to target
-    size_t i = 0; // TODO
     while (!open_set1->empty())
     {
         current_node1 = open_set1->pop();
@@ -573,7 +564,6 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
             }
             return path;
         }
-        ++ ++i;
 
         // track new neighbors
         for (Node *neighbor_node : current_node1->nexts)

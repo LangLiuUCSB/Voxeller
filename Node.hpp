@@ -1,13 +1,13 @@
 #ifndef NODE_HPP
 #define NODE_HPP
 
-#include <vector>
-
 #include "Coordinate.hpp"
+
+#include <vector>
 
 struct Node
 {
-    Coordinate coordinate;
+    const Coordinate coordinate;
     std::vector<Node *> nexts;
     Node *previous;
     char prior_move;

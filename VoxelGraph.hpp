@@ -22,11 +22,9 @@ class VoxelGraph
     // helper functions
     u_int8_t hex_to_dec(char hex) const { return (hex <= '9') ? hex - '0' : hex - 'W'; }
 
-    bool is_out_of_bounds(Coordinate coordinate) const { return coordinate.x < 0 || coordinate.x >= x_limit ||
-                                                                coordinate.y < 0 || coordinate.y >= y_limit ||
-                                                                coordinate.z < 0 || coordinate.z >= z_limit; }
+    bool not_in_bounds(Coordinate c) const { return c.x < 0 || c.x >= x_limit || c.y < 0 || c.y >= y_limit || c.z < 0 || c.z >= z_limit; }
 
-    size_t coordinate_to_index(Coordinate coordinate) const { return coordinate.x + x_limit * (coordinate.y + y_limit * coordinate.z); }
+    size_t coordinate_to_index(Coordinate c) const { return c.x + x_limit * (c.y + y_limit * c.z); }
 
 public:
     VoxelGraph(std::istream &stream);
