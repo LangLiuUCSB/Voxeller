@@ -24,7 +24,6 @@
 #define IS_VISITED ->visit_id == current_visit_id
 
 /*
-TODO random source-target pair generator
 TODO evolving-heuristic dual open set
 TODO fork-join parallelism
 TODO conneted components precomputation
@@ -144,18 +143,65 @@ VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
     }
 
     // initialize open sets
-    open_set1 = new BinaryHeap<Node *, NodePtrMinHeapComparator>(map_volume >> 3, NodePtrMinHeapComparator());
-    open_set2 = new BinaryHeap<Node *, NodePtrMinHeapComparator>(map_volume >> 3, NodePtrMinHeapComparator());
+    open_set1 = new BinaryHeap<Node *, NodePtrMinHeapComparator>(map_volume, NodePtrMinHeapComparator());
+    open_set2 = new BinaryHeap<Node *, NodePtrMinHeapComparator>(map_volume, NodePtrMinHeapComparator());
 }
 
-VoxelGraph::~VoxelGraph()
+size_t VoxelGraph::node_count() const
 {
-    for (size_t i = 0; i < map_volume; ++i)
-        if (node_map[i])
-            delete node_map[i];
-    delete[] node_map;
-    delete open_set1;
-    delete open_set2;
+    size_t count = 0;
+    for (size_t i = map_area; i < map_volume; ++i)
+    {
+        if (node_map[i] != nullptr && i == coordinate_to_index(node_map[i]->coordinate))
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+size_t VoxelGraph::find_max_distance() const
+{
+    size_t max_distance = 0;
+    for (size_t i = map_area; i < map_volume; ++i)
+    {
+        if (node_map[i] != nullptr &&
+            i == coordinate_to_index(node_map[i]->coordinate))
+        {
+            for (size_t j = map_area; j < map_volume; ++j)
+            {
+                if (node_map[j] != nullptr &&
+                    j == coordinate_to_index(node_map[j]->coordinate) &&
+                    node_map[i]->coordinate.manhattan_distance(node_map[j]->coordinate) > max_distance)
+                {
+                    max_distance = node_map[i]->coordinate.manhattan_distance(node_map[j]->coordinate);
+                }
+            }
+        }
+    }
+    return max_distance;
+}
+
+std::vector<TravelPlan> VoxelGraph::find_all_travel_plans(size_t minimum_distance) const
+{
+    std::vector<TravelPlan> travel_plans;
+    for (size_t i = map_area; i < map_volume; ++i)
+    {
+        if (node_map[i] != nullptr &&
+            i == coordinate_to_index(node_map[i]->coordinate))
+        {
+            for (size_t j = map_area; j < map_volume; ++j)
+            {
+                if (node_map[j] != nullptr &&
+                    j == coordinate_to_index(node_map[j]->coordinate) &&
+                    node_map[i]->coordinate.manhattan_distance(node_map[j]->coordinate) >= minimum_distance)
+                {
+                    travel_plans.emplace_back(node_map[i]->coordinate, node_map[j]->coordinate);
+                }
+            }
+        }
+    }
+    return travel_plans;
 }
 
 std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target)
@@ -184,12 +230,12 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
     Node *current_node = source_node;
     auto set_as_visited = [target, &current_node](Node *neighbor_node)
     {
-        neighbor_node->visit_id = current_node->visit_id;
         neighbor_node->previous = current_node;
         neighbor_node->prior_move =
             (neighbor_node->coordinate.x - current_node->coordinate.x)
                 ? ((neighbor_node->coordinate.x - current_node->coordinate.x == 1) ? 'e' : 'w')
                 : ((neighbor_node->coordinate.y - current_node->coordinate.y == 1) ? 's' : 'n');
+        neighbor_node->visit_id = current_node->visit_id;
         neighbor_node->cost_key = target.manhattan_distance(neighbor_node->coordinate);
     };
 
@@ -209,7 +255,7 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
         // check if target has been reached
         if (current_node == target_node)
         {
-            PRINT "Voxelgraph: This GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            // PRINT "Voxelgraph: This GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
             open_set1->clear();
             std::string path;
             while (current_node != source_node)
@@ -263,12 +309,12 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
     Node *current_node = source_node;
     auto set_as_visited = [source, &current_node](Node *neighbor_node)
     {
-        neighbor_node->visit_id = current_node->visit_id;
         neighbor_node->previous = current_node;
         neighbor_node->prior_move =
             (neighbor_node->coordinate.x - current_node->coordinate.x)
                 ? ((neighbor_node->coordinate.x - current_node->coordinate.x == -1) ? 'e' : 'w')
                 : ((neighbor_node->coordinate.y - current_node->coordinate.y == -1) ? 's' : 'n');
+        neighbor_node->visit_id = current_node->visit_id;
         neighbor_node->cost_key = source.manhattan_distance(neighbor_node->coordinate);
     };
 
@@ -288,7 +334,7 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
         // check if target has been reached
         if (current_node == target_node)
         {
-            PRINT "Voxelgraph: This Reverse GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            // PRINT "Voxelgraph: This Reverse GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
             open_set1->clear();
             std::string path;
             while (current_node != source_node)
@@ -350,22 +396,22 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
 
     auto set_as_visited1 = [target, &current_node1](Node *neighbor_node)
     {
-        neighbor_node->visit_id = current_node1->visit_id;
         neighbor_node->previous = current_node1;
         neighbor_node->prior_move =
             (neighbor_node->coordinate.x - current_node1->coordinate.x)
                 ? ((neighbor_node->coordinate.x - current_node1->coordinate.x == 1) ? 'e' : 'w')
                 : ((neighbor_node->coordinate.y - current_node1->coordinate.y == 1) ? 's' : 'n');
+        neighbor_node->visit_id = current_node1->visit_id;
         neighbor_node->cost_key = target.manhattan_distance(neighbor_node->coordinate);
     };
     auto set_as_visited2 = [source, &current_node2](Node *neighbor_node)
     {
-        neighbor_node->visit_id = current_node2->visit_id;
         neighbor_node->previous = current_node2;
         neighbor_node->prior_move =
             (neighbor_node->coordinate.x - current_node2->coordinate.x)
                 ? ((neighbor_node->coordinate.x - current_node2->coordinate.x == -1) ? 'e' : 'w')
                 : ((neighbor_node->coordinate.y - current_node2->coordinate.y == -1) ? 's' : 'n');
+        neighbor_node->visit_id = current_node2->visit_id;
         neighbor_node->cost_key = source.manhattan_distance(neighbor_node->coordinate);
     };
 
@@ -391,8 +437,8 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
         // check if target has been reached
         if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
         {
-            PRINT "Voxelgraph: This Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
-            PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                            // TODO
+            // PRINT "Voxelgraph: This Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            // PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                            // TODO
             open_set1->clear();
             std::string path;
             current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
@@ -509,8 +555,8 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
         // check if target has been reached
         if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
         {
-            PRINT "Voxelgraph: This Evolving-Heuristic Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
-            PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                                               // TODO
+            // PRINT "Voxelgraph: This Evolving-Heuristic Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
+            // PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                                               // TODO
             open_set1->clear();
             std::string path;
             current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
@@ -549,4 +595,14 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
     // when no path is found
     open_set1->clear();
     throw Untraversable(source, target);
+}
+
+VoxelGraph::~VoxelGraph()
+{
+    for (size_t i = 0; i < map_volume; ++i)
+        if (node_map[i])
+            delete node_map[i];
+    delete[] node_map;
+    delete open_set1;
+    delete open_set2;
 }

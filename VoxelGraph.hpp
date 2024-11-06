@@ -2,11 +2,12 @@
 #define VOXELGRAPH_HPP
 
 #include "Coordinate.hpp"
-#include "BinaryHeap.hpp"
 #include "Node.hpp"
-#include "Utils.hpp"
+#include "BinaryHeap.hpp"
+#include "TravelPlan.hpp"
 #include "Errors.hpp"
 
+static constexpr uint8_t bit_mask[] = {0b1000, 0b0100, 0b0010, 0b0001};
 class VoxelGraph
 {
     // member variables
@@ -29,13 +30,18 @@ class VoxelGraph
 
 public:
     VoxelGraph(std::istream &stream);
-    ~VoxelGraph();
+
+    size_t node_count() const;
+    size_t find_max_distance() const;
+    std::vector<TravelPlan> find_all_travel_plans(size_t minimum_distance = 2) const;
 
     // path find funcitons
     std::string GBeFS(const Coordinate &source, const Coordinate &target);     // greedy best first search
     std::string RGBeFS(const Coordinate &source, const Coordinate &target);    // reverse GBeFS
     std::string BDGBeFS(const Coordinate &source, const Coordinate &target);   // bidirectional GBeFS
     std::string EHBDGBeFS(const Coordinate &source, const Coordinate &target); // evolving-heuristic BDGBeFS
+
+    ~VoxelGraph();
 };
 
 #endif
