@@ -5,6 +5,7 @@
 #include "Node.hpp"
 #include "BinaryHeap.hpp"
 #include "TravelPlan.hpp"
+#include "Route.hpp"
 #include "Errors.hpp"
 
 static constexpr uint8_t bit_mask[] = {0b1000, 0b0100, 0b0010, 0b0001};
@@ -34,10 +35,10 @@ public:
     std::vector<TravelPlan> find_all_travel_plans(size_t minimum_distance = 2) const;
 
     // path find funcitons
-    std::string GBeFS(const Coordinate &source, const Coordinate &target);     // greedy best first search
-    std::string RGBeFS(const Coordinate &source, const Coordinate &target);    // reverse GBeFS
-    std::string BDGBeFS(const Coordinate &source, const Coordinate &target);   // bidirectional GBeFS
-    std::string EHBDGBeFS(const Coordinate &source, const Coordinate &target); // evolving-heuristic BDGBeFS
+    Route GBeFS(const Coordinate &source, const Coordinate &target);     // greedy best first search
+    Route RGBeFS(const Coordinate &source, const Coordinate &target);    // reverse GBeFS
+    Route BDGBeFS(const Coordinate &source, const Coordinate &target);   // bidirectional GBeFS
+    Route EHBDGBeFS(const Coordinate &source, const Coordinate &target); // evolving-heuristic BDGBeFS
 
     ~VoxelGraph();
 };

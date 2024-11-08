@@ -6,51 +6,45 @@
 #define PRINT std::cout <<
 #define NL '\n'
 #define HELP PRINT "HELP~main\n"
+#define ERROR std::cerr <<
 
 #include <numeric>
 
 void chronometrize(VoxelGraph &vg,
-                   std::string (VoxelGraph::*f_ptr)(const Coordinate &source, const Coordinate &target),
+                   Route (VoxelGraph::*f_ptr)(const Coordinate &source, const Coordinate &target),
                    const Coordinate &source,
                    const Coordinate &target)
 {
-    std::string path;
+    Route path;
     auto start = std::chrono::high_resolution_clock::now();
     try
     {
         path = (vg.*f_ptr)(source, target);
     }
-    catch (const InvalidCoordinate &err)
+    catch (const InvalidCoordinate &e)
     {
-        PRINT "Invalid coordinate: " << err.coordinate << NL;
+        ERROR "Invalid coordinate: " << e.coordinate << NL;
     }
-    catch (const Untraversable &err)
+    catch (const Untraversable &e)
     {
-        PRINT "No path from " << err.source << " to " << err.target << NL;
+        ERROR "No path from " << e.source << " to " << e.target << NL;
+    }
+    catch (const std::out_of_range &e)
+    {
+        ERROR e.what() << NL;
     }
     std::chrono::duration<double, std::micro> elapsed = std::chrono::high_resolution_clock::now() - start;
     PRINT "Search time: " << elapsed.count() << " microseconds.\nPath: " << path << ".\nPath length: " << path.size() << " steps.\n\n";
 }
 
 double get_time(VoxelGraph &vg,
-                std::string (VoxelGraph::*f_ptr)(const Coordinate &source, const Coordinate &target),
+                Route (VoxelGraph::*f_ptr)(const Coordinate &source, const Coordinate &target),
                 const Coordinate &source,
                 const Coordinate &target)
 {
-    std::string path;
+    Route path;
     auto start = std::chrono::high_resolution_clock::now();
-    try
-    {
-        path = (vg.*f_ptr)(source, target);
-    }
-    catch (const InvalidCoordinate &err)
-    {
-        // PRINT "Invalid coordinate: " << err.coordinate << NL;
-    }
-    catch (const Untraversable &err)
-    {
-        // PRINT "No path from " << err.source << " to " << err.target << NL;
-    }
+    path = (vg.*f_ptr)(source, target);
     std::chrono::duration<double, std::micro> elapsed = std::chrono::high_resolution_clock::now() - start;
     return elapsed.count();
 }
@@ -77,11 +71,11 @@ TravelPlan pop_random(std::vector<TravelPlan> &v)
 int main()
 {
     // data to stream
-    std::string data = "worlds/fortress.vox";
+    auto data = "worlds/fortress.vox";
     std::ifstream stream(data);
     if (stream.fail())
     {
-        std::cerr << "ERROR: Could not open file: " << data << NL;
+        ERROR "ERROR: Could not open file: " << data << NL;
         return 1;
     }
     PRINT "\nFilepath: " << data << NL;
@@ -133,24 +127,50 @@ int main()
     for (size_t i = 0; i < num_travel_plans; ++i)
     {
         TravelPlan tp = pop_random(travel_plans);
-        search_times.emplace_back(get_time(vg, &VoxelGraph::GBeFS, tp.source, tp.target));
+        double search_time;
+        try
+        {
+            search_time = get_time(vg, &VoxelGraph::BDGBeFS, tp.source, tp.target);
+        }
+        catch (const InvalidCoordinate &e)
+        {
+            ERROR "Invalid coordinate: " << e.coordinate << NL;
+            ERROR "Error from benchmarking" << NL;
+            return 1;
+        }
+        catch (const Untraversable &e)
+        {
+            ERROR "No path from " << e.source << " to " << e.target << NL;
+            ERROR "Error from benchmarking" << NL;
+            return 1;
+        }
+        catch (const std::out_of_range &e)
+        {
+            ERROR e.what() << NL;
+            ERROR "Error from benchmarking" << NL;
+            return 1;
+        }
+        search_times.push_back(search_time);
     }
-    PRINT "average search time of basic GBeFS: " << average(search_times) << " microseconds\n";
+    PRINT "average search time of reverse GBeFS: " << average(search_times) << " microseconds\n";
     /*
     // set source and target coordinates
     const Coordinate source(4, 2, 1), target(64, 42, 36);
 
     // find path
     chronometrize(vg, &VoxelGraph::GBeFS, source, target);
-    chronometrize(vg, &VoxelGraph::R-GBeFS, source, target); // roughly 7% faster than basic non-reverse GBeFS
+    chronometrize(vg, &VoxelGraph::R-GBeFS, source, target); // roughly 7% faster than basic non-reverse GBeFS on average
     chronometrize(vg, &VoxelGraph::BD-GBeFS, source, target); // TODO Error: BinaryHeap overflow caused by push
     chronometrize(vg, &VoxelGraph::EH-BD-GBeFS, source, target); // TODO needs overhaul
     */
     return 0;
 }
 /*
-GBeFS  151.141 150.517 150.468 150.587 150.661
+Average times of search in microseconds:
+
+ GBeFS  151.141 150.517 150.468 150.587 150.661
         151.260 150.673 150.798 150.301 150.481
+
 RGBeFS  139.197 139.096 138.942 139.606 139.778
         139.976 138.997 139.728 141.003 140.184
 */

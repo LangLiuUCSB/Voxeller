@@ -202,7 +202,7 @@ std::vector<TravelPlan> VoxelGraph::find_all_travel_plans(size_t minimum_distanc
     return travel_plans;
 }
 
-std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target)
+Route VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
     if (not_in_bounds(source))
@@ -254,14 +254,14 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
         {
             // PRINT "Voxelgraph: This GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
             open_set1->clear();
-            std::string path;
+            Route route;
             while (current_node != source_node)
             {
-                path.push_back(current_node->prior_move);
+                route.push_back(current_node->prior_move);
                 current_node = current_node->previous;
             }
-            std::reverse(path.begin(), path.end());
-            return path;
+            std::reverse(route.begin(), route.end());
+            return route;
         }
 
         // track new neighbors
@@ -279,7 +279,7 @@ std::string VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target
     throw Untraversable(source, target);
 }
 
-std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
+Route VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
     if (not_in_bounds(target))
@@ -324,20 +324,27 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
     // search path to target
     while (!open_set1->empty())
     {
-        current_node = open_set1->pop();
+        try
+        {
+            current_node = open_set1->pop();
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << e.what() << '\n';
+        }
 
         // check if target has been reached
         if (current_node == target_node)
         {
             // PRINT "Voxelgraph: This Reverse GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
             open_set1->clear();
-            std::string path;
+            Route route;
             while (current_node != source_node)
             {
-                path.push_back(current_node->prior_move);
+                route.push_back(current_node->prior_move);
                 current_node = current_node->previous;
             }
-            return path;
+            return route;
         }
 
         // track new neighbors
@@ -355,7 +362,7 @@ std::string VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &targe
     throw Untraversable(source, target);
 }
 
-std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
+Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
     if (not_in_bounds(source))
@@ -433,20 +440,20 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
             // PRINT "Voxelgraph: This Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
             // PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                            // TODO
             open_set1->clear();
-            std::string path;
+            Route route;
             current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
             while (current_node1 != source_node1)
             {
-                path.push_back(current_node1->prior_move);
+                route.push_back(current_node1->prior_move);
                 current_node1 = current_node1->previous;
             }
-            std::reverse(path.begin(), path.end());
+            std::reverse(route.begin(), route.end());
             while (current_node2 != source_node2)
             {
-                path.push_back(current_node2->prior_move);
+                route.push_back(current_node2->prior_move);
                 current_node2 = current_node2->previous;
             }
-            return path;
+            return route;
         }
 
         // track new neighbors
@@ -471,7 +478,7 @@ std::string VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &targ
     throw Untraversable(source, target);
 }
 
-std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &target)
+Route VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
     if (not_in_bounds(source))
@@ -549,20 +556,20 @@ std::string VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &ta
             // PRINT "Voxelgraph: This Evolving-Heuristic Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
             // PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                                               // TODO
             open_set1->clear();
-            std::string path;
+            Route route;
             current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
             while (current_node1 != source_node1)
             {
-                path.push_back(current_node1->prior_move);
+                route.push_back(current_node1->prior_move);
                 current_node1 = current_node1->previous;
             }
-            std::reverse(path.begin(), path.end());
+            std::reverse(route.begin(), route.end());
             while (current_node2 != source_node2)
             {
-                path.push_back(current_node2->prior_move);
+                route.push_back(current_node2->prior_move);
                 current_node2 = current_node2->previous;
             }
-            return path;
+            return route;
         }
 
         // track new neighbors
