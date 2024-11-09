@@ -420,19 +420,52 @@ Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
     for (Node *neighbor_node : source_node1->nexts)
     {
         set_as_visited1(neighbor_node);
-        open_set1->push(neighbor_node);
+        try // TODO
+        {
+            open_set1->push(neighbor_node);
+        }
+        catch (const std::out_of_range &e)
+        {
+            PRINT source << target << NL;
+            throw e;
+        }
     }
     for (Node *neighbor_node : source_node2->nexts)
     {
         set_as_visited2(neighbor_node);
-        open_set2->push(neighbor_node);
+        try // TODO
+        {
+            open_set2->push(neighbor_node);
+        }
+        catch (const std::out_of_range &e)
+        {
+            PRINT source << target << NL;
+            throw e;
+        }
     }
 
     // search path to target
     while (!open_set1->empty())
     {
-        current_node1 = open_set1->pop();
-        current_node2 = open_set2->pop();
+        try // TODO
+        {
+            current_node1 = open_set1->pop();
+        }
+        catch (const std::out_of_range &e)
+        {
+            PRINT source << target << NL;
+            throw e;
+        }
+
+        try // TODO
+        {
+            current_node2 = open_set2->pop();
+        }
+        catch (const std::out_of_range &e)
+        {
+            PRINT source << target << NL;
+            throw e;
+        }
 
         // check if target has been reached
         if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
@@ -462,14 +495,30 @@ Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
             if (neighbor_node IS_VISITED)
                 continue;
             set_as_visited1(neighbor_node);
-            open_set1->push(neighbor_node);
+            try // TODO
+            {
+                open_set2->push(neighbor_node);
+            }
+            catch (const std::out_of_range &e)
+            {
+                PRINT source << target << NL;
+                throw e;
+            }
         }
         for (Node *neighbor_node : current_node2->nexts)
         {
             if (neighbor_node IS_VISITED)
                 continue;
             set_as_visited2(neighbor_node);
-            open_set2->push(neighbor_node);
+            try // TODO
+            {
+                open_set2->push(neighbor_node);
+            }
+            catch (const std::out_of_range &e)
+            {
+                PRINT source << target << NL;
+                throw e;
+            }
         }
     }
 

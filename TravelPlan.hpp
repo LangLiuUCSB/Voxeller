@@ -3,6 +3,8 @@
 
 #include "Coordinate.hpp"
 
+#define ERROR std::cerr <<
+
 struct TravelPlan
 {
     Coordinate source, target;
