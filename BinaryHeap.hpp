@@ -2,7 +2,6 @@
 #define BINARYHEAP_HPP
 
 #include <algorithm>
-#include <iostream>
 
 template <typename T, typename Comparator>
 class BinaryHeap

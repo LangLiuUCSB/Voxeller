@@ -8,6 +8,8 @@
 #include "Route.hpp"
 #include "Errors.hpp"
 
+#include <iostream>
+
 static constexpr uint8_t bit_mask[] = {0b1000, 0b0100, 0b0010, 0b0001};
 class VoxelGraph
 {
