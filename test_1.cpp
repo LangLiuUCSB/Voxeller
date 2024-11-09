@@ -1,5 +1,7 @@
 #include "testing_tools.hpp"
 
+#include <fstream>
+
 #define HELP PRINT "HELP~test_random\n"
 
 int main()
@@ -14,24 +16,23 @@ int main()
     }
     PRINT "\nFilepath: " << data << NL;
 
-    std::chrono::time_point<std::chrono::high_resolution_clock> start;
-    std::chrono::duration<double, std::micro> elapsed;
+    Chronometer XPOHOMETP;
 
     // stream to VoxelGraph
-    start = std::chrono::high_resolution_clock::now();
+    XPOHOMETP.set_hi_res_start();
     VoxelGraph vg(stream);
-    elapsed = std::chrono::high_resolution_clock::now() - start;
-    PRINT "Initialization time: " << elapsed.count() << " microseconds\n\n";
+    XPOHOMETP.set_hi_res_end();
+    PRINT "Initialization time: " << XPOHOMETP.get_us() << " microseconds\n\n";
 
     stream.close();
 
     // find all valid travel plans
     size_t distance = 128;
     std::vector<TravelPlan> travel_plans;
-    start = std::chrono::high_resolution_clock::now();
+    XPOHOMETP.set_hi_res_start();
     travel_plans = vg.find_all_travel_plans(distance);
-    elapsed = std::chrono::high_resolution_clock::now() - start;
-    PRINT "Total pairing time: " << elapsed.count() << " microseconds\n"
+    XPOHOMETP.set_hi_res_end();
+    PRINT "Total pairing time: " << XPOHOMETP.get_us() << " microseconds\n"
                                  << "This world has " << travel_plans.size()
                                  << " unique travel plans that are at least " << distance
                                  << " units apart.\n\n";

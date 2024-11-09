@@ -1,5 +1,7 @@
 #include "testing_tools.hpp"
 
+#include <fstream>
+
 #define HELP PRINT "HELP~test_specific\n"
 
 int main()
@@ -14,14 +16,13 @@ int main()
     }
     PRINT "\nFilepath: " << data << NL;
 
-    std::chrono::time_point<std::chrono::high_resolution_clock> start;
-    std::chrono::duration<double, std::micro> elapsed;
+    Chronometer XPOHOMETP;
 
     // stream to VoxelGraph
-    start = std::chrono::high_resolution_clock::now();
+    XPOHOMETP.set_hi_res_start();
     VoxelGraph vg(stream);
-    elapsed = std::chrono::high_resolution_clock::now() - start;
-    PRINT "Initialization time: " << elapsed.count() << " microseconds\n\n";
+    XPOHOMETP.set_hi_res_end();
+    PRINT "Initialization time: " << XPOHOMETP.get_us() << " microseconds\n\n";
 
     stream.close();
 

@@ -1,5 +1,7 @@
 #include "testing_tools.hpp"
 
+#include <fstream>
+
 #define HELP PRINT "HELP~test_analysis\n"
 
 int main()
@@ -14,33 +16,32 @@ int main()
     }
     PRINT "\nFilepath: " << data << NL;
 
-    std::chrono::time_point<std::chrono::high_resolution_clock> start;
-    std::chrono::duration<double, std::micro> elapsed;
+    Chronometer XPOHOMETP;
 
     // stream to VoxelGraph
-    start = std::chrono::high_resolution_clock::now();
+    XPOHOMETP.set_hi_res_start();
     VoxelGraph vg(stream);
-    elapsed = std::chrono::high_resolution_clock::now() - start;
-    PRINT "Initialization time: " << elapsed.count() << " microseconds\n\n";
+    XPOHOMETP.set_hi_res_end();
+    PRINT "Initialization time: " << XPOHOMETP.get_us() << " microseconds\n\n";
 
     stream.close();
 
     // find how many valid positions are there
     size_t num_valid_positions;
-    start = std::chrono::high_resolution_clock::now();
+    XPOHOMETP.set_hi_res_start();
     num_valid_positions = vg.node_count();
-    elapsed = std::chrono::high_resolution_clock::now() - start;
-    PRINT "Count time: " << elapsed.count() << " microseconds\n"
+    XPOHOMETP.set_hi_res_end();
+    PRINT "Count time: " << XPOHOMETP.get_us() << " microseconds\n"
                          << "This world has " << num_valid_positions
                          << " valid positions.\nThis world has " << num_valid_positions * num_valid_positions
                          << " unique travel plans.\n\n";
 
     // find all valid travel plans
     size_t max_distance;
-    start = std::chrono::high_resolution_clock::now();
+    XPOHOMETP.set_hi_res_start();
     max_distance = vg.find_max_distance();
-    elapsed = std::chrono::high_resolution_clock::now() - start;
-    PRINT "Total pairing time: " << elapsed.count() << " microseconds\n"
+    XPOHOMETP.set_hi_res_end();
+    PRINT "Total pairing time: " << XPOHOMETP.get_us() << " microseconds\n"
                                  << "Largest distance between two positions is " << max_distance
                                  << ".\n\n";
 

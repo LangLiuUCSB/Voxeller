@@ -1,10 +1,8 @@
 #ifndef TESTING_TOOLS_HPP
 #define TESTING_TOOLS_HPP
 
-#include <iostream>
-#include <fstream>
-
 #include "VoxelGraph.hpp"
+#include "Chronometer.hpp"
 
 #include <numeric>
 
@@ -17,8 +15,9 @@ inline void chronometrize(VoxelGraph &vg,
                           const Coordinate &source,
                           const Coordinate &target)
 {
+    Chronometer XPOHOMETP;
     Route path;
-    auto start = std::chrono::high_resolution_clock::now();
+    XPOHOMETP.set_hi_res_start();
     try
     {
         path = (vg.*f_ptr)(source, target);
@@ -35,8 +34,8 @@ inline void chronometrize(VoxelGraph &vg,
     {
         std::cerr << e.what() << '\n';
     }
-    std::chrono::duration<double, std::micro> elapsed = std::chrono::high_resolution_clock::now() - start;
-    std::cout << "Search time: " << elapsed.count() << " microseconds.\nPath: " << path << ".\nPath length: " << path.size() << " steps.\n\n";
+    XPOHOMETP.set_hi_res_end();
+    std::cout << "Search time: " << XPOHOMETP.get_us() << " microseconds.\nPath: " << path << ".\nPath length: " << path.size() << " steps.\n\n";
 }
 
 inline double get_time(VoxelGraph &vg,
@@ -44,19 +43,15 @@ inline double get_time(VoxelGraph &vg,
                        const Coordinate &source,
                        const Coordinate &target)
 {
+    Chronometer XPOHOMETP;
     Route path;
-    auto start = std::chrono::high_resolution_clock::now();
+    XPOHOMETP.set_hi_res_start();
     path = (vg.*f_ptr)(source, target);
-    std::chrono::duration<double, std::micro> elapsed = std::chrono::high_resolution_clock::now() - start;
-    return elapsed.count();
+    XPOHOMETP.set_hi_res_end();
+    return XPOHOMETP.get_us();
 }
 
-inline double average(const std::vector<double> &vec)
-{
-    if (vec.empty())
-        return 0.0;
-    return std::accumulate(vec.begin(), vec.end(), 0.0) / vec.size();
-}
+inline double average(const std::vector<double> &vec) { return vec.empty() ? 0.0 : std::accumulate(vec.begin(), vec.end(), 0.0) / vec.size(); }
 
 inline TravelPlan pop_random(std::vector<TravelPlan> &v)
 {
