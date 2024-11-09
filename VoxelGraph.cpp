@@ -23,16 +23,6 @@
 
 #define IS_VISITED ->visit_id == current_visit_id
 
-/*
-TODO evolving-heuristic dual open set
-TODO fork-join parallelism
-TODO conneted components precomputation
-TODO path storage and subset search
-TODO benchmarking other types of heaps for open set
-TODO system dependent space optimization
-TODO fileread async
-*/
-
 VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
 {
     stream >> x_limit >> y_limit >> z_limit; // initialize world upper bounds
