@@ -12,8 +12,8 @@ class Chronometer
 public:
     void set_hi_res_start() { hi_res_start = std::chrono::high_resolution_clock::now(); };
     void set_hi_res_end() { hi_res_end = std::chrono::high_resolution_clock::now(); };
-    void set_steady_start() { hi_res_start = std::chrono::steady_clock::now(); };
-    void set_steady_end() { hi_res_end = std::chrono::steady_clock::now(); };
+    void set_steady_start() { steady_start = std::chrono::steady_clock::now(); };
+    void set_steady_end() { steady_end = std::chrono::steady_clock::now(); };
     void set_system_start() { system_start = std::chrono::system_clock::now(); };
     void set_system_end() { system_end = std::chrono::system_clock::now(); };
     double get_ns() const { return std::chrono::duration_cast<std::chrono::nanoseconds>(hi_res_end - hi_res_start).count(); };
