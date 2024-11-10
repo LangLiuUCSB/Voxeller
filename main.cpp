@@ -6,25 +6,19 @@
 
 int main()
 {
-    // data to stream
-    auto data = "worlds/fortress.vox";
-    std::ifstream stream(data);
-    if (stream.fail())
+    std::ofstream outFile("outputs/travel_plans.txt", std::ios::binary);
+
+    if (!outFile)
     {
-        ERROR "ERROR: Could not open file: " << data << NL;
+        std::cerr << "Error opening file for writing!" << std::endl;
         return 1;
     }
-    PRINT "\nFilepath: " << data << NL;
 
-    Chronometer XPOHOMETP;
+    const char data[] = {0};
+    outFile.write(data, 1);
 
-    // stream to VoxelGraph
-    XPOHOMETP.set_hi_res_start();
-    VoxelGraph vg(stream);
-    XPOHOMETP.set_hi_res_end();
-    PRINT "Initialization time: " << XPOHOMETP.get_us() << " microseconds\n\n";
-
-    stream.close();
+    outFile.close();
+    std::cout << "Data successfully written to file!" << std::endl;
 
     return 0;
 }

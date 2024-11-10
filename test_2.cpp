@@ -27,15 +27,14 @@ int main()
     stream.close();
 
     // set source and target coordinates
-    // const Coordinate source(4, 2, 1), target(64, 42, 36);
-    // const Coordinate source(72, 46, 3), target(9, 9, 36); // pop error
-    const Coordinate source(7, 3, 36), target(67, 50, 3); // push error
+    const Coordinate source(4, 2, 1), target(64, 42, 36);
 
     // find path
-    // chronometrize(vg, &VoxelGraph::GBeFS, source, target);
-    // chronometrize(vg, &VoxelGraph::RGBeFS, source, target);    // roughly 7% faster than basic non-reverse GBeFS on average
-    chronometrize(vg, &VoxelGraph::BDGBeFS, source, target); // TODO Error: BinaryHeap overflow caused by push
-    // chronometrize(vg, &VoxelGraph::EHBDGBeFS, source, target); // TODO needs overhaul
+    chronometrize(vg, &VoxelGraph::GBeFS, source, target);
+    chronometrize(vg, &VoxelGraph::RGBeFS, source, target); // roughly 7% faster than basic non-reverse GBeFS on average
+    chronometrize(vg, &VoxelGraph::BDGBeFS, source, target);
+
+    PRINT std::endl;
 
     return 0;
 }

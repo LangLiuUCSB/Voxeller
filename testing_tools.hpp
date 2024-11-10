@@ -45,8 +45,26 @@ inline double get_time(VoxelGraph &vg,
 {
     Chronometer XPOHOMETP;
     Route path;
-    XPOHOMETP.set_hi_res_start();
-    path = (vg.*f_ptr)(source, target);
+    try
+    {
+        XPOHOMETP.set_hi_res_start();
+        path = (vg.*f_ptr)(source, target);
+    }
+    catch (const InvalidCoordinate &e)
+    {
+        ERROR "Invalid coordinate: " << e.coordinate << NL;
+        throw e;
+    }
+    catch (const Untraversable &e)
+    {
+        XPOHOMETP.set_hi_res_end();
+        return XPOHOMETP.get_us();
+    }
+    catch (const std::out_of_range &e)
+    {
+        ERROR e.what() << NL;
+        throw e;
+    }
     XPOHOMETP.set_hi_res_end();
     return XPOHOMETP.get_us();
 }

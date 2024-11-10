@@ -38,6 +38,7 @@ int main()
                                  << " units apart.\n\n";
 
     // algorithm benchmarking
+
     std::vector<double> search_times;
     size_t num_travel_plans = travel_plans.size();
     for (size_t i = 0; i < num_travel_plans; ++i)
@@ -48,36 +49,32 @@ int main()
         {
             search_time = get_time(vg, &VoxelGraph::BDGBeFS, tp.source, tp.target);
         }
-        catch (const InvalidCoordinate &e)
+        catch (const std::exception &e)
         {
-            ERROR "Invalid coordinate: " << e.coordinate << NL;
-            ERROR "Error from benchmarking" << NL;
-            return 0;
-        }
-        catch (const Untraversable &e)
-        {
-            // ERROR "No path from " << e.source << " to " << e.target << NL;
-            // ERROR "Error from benchmarking" << NL;
-            // return 0;
-        }
-        catch (const std::out_of_range &e)
-        {
-            ERROR e.what() << NL;
-            ERROR "Error from benchmarking" << NL;
-            return 0;
+            return 1;
         }
         search_times.push_back(search_time);
     }
-    PRINT "average search time of directional GBeFS: " << average(search_times) << " microseconds\n";
+    PRINT "average search time of basic GBeFS: " << average(search_times) << " microseconds" << std::endl;
 
     return 0;
 }
 /*
 Average times of search in microseconds:
 
- GBeFS  151.141 150.517 150.468 150.587 150.661
-        151.260 150.673 150.798 150.301 150.481
+GBeFS
+151.141 150.517 150.468 150.587 150.661
+151.260 150.673 150.798 150.301 150.481
 
-RGBeFS  139.197 139.096 138.942 139.606 139.778
-        139.976 138.997 139.728 141.003 140.184
+RGBeFS
+200.725 200.415 204.138 200.477 200.753
+204.293 200.983 197.014 195.221 195.121
+
+BDGBeFS (Static Heuristics)
+159.873 157.429 157.925 157.206 154.978
+153.467 153.869 154.130 155.903 160.377
+
+BGBeFS (Dynamic Heuristics)
+146.212 147.226 145.446 145.637 145.585
+145.800 147.236 145.660 148.524 146.182
 */

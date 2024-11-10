@@ -150,6 +150,19 @@ size_t VoxelGraph::node_count() const
     return count;
 }
 
+std::vector<Coordinate> VoxelGraph::find_all_valid_position() const
+{
+    std::vector<Coordinate> positions;
+    for (size_t i = map_area; i < map_volume; ++i)
+    {
+        if (node_map[i] != nullptr && i == coordinate_to_index(node_map[i]->coordinate))
+        {
+            positions.emplace_back(node_map[i]->coordinate);
+        }
+    }
+    return positions;
+}
+
 size_t VoxelGraph::find_max_distance() const
 {
     size_t max_distance = 0;
@@ -314,14 +327,7 @@ Route VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
     // search path to target
     while (!open_set1->empty())
     {
-        try
-        {
-            current_node = open_set1->pop();
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << e.what() << '\n';
-        }
+        current_node = open_set1->pop();
 
         // check if target has been reached
         if (current_node == target_node)
@@ -353,171 +359,6 @@ Route VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
 }
 
 Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
-{
-    // check source validity
-    if (not_in_bounds(source))
-        throw InvalidCoordinate(source);
-    Node *source_node1 = node_map[coordinate_to_index(source)];
-    if (source_node1 == nullptr)
-        throw InvalidCoordinate(source);
-
-    // trivial case
-    if (source == target)
-        return "";
-
-    // check target validity
-    if (not_in_bounds(target))
-        throw InvalidCoordinate(target);
-    Node *target_node1 = node_map[coordinate_to_index(target)];
-    if (target_node1 == nullptr)
-        throw InvalidCoordinate(target);
-
-    // configure current search setup
-    source_node1->visit_id = ++current_visit_id;
-    target_node1->cost_key = 0;
-
-    Node *source_node2 = node_map[coordinate_to_index(target) INVERSE];
-    Node *target_node2 = node_map[coordinate_to_index(source) INVERSE];
-
-    source_node2->visit_id = current_visit_id;
-    target_node2->cost_key = 0;
-
-    Node *current_node1 = source_node1;
-    Node *current_node2 = source_node2;
-
-    auto set_as_visited1 = [target, &current_node1](Node *neighbor_node)
-    {
-        neighbor_node->previous = current_node1;
-        neighbor_node->prior_move =
-            (neighbor_node->coordinate.x - current_node1->coordinate.x)
-                ? ((neighbor_node->coordinate.x - current_node1->coordinate.x == 1) ? 'e' : 'w')
-                : ((neighbor_node->coordinate.y - current_node1->coordinate.y == 1) ? 's' : 'n');
-        neighbor_node->visit_id = current_node1->visit_id;
-        neighbor_node->cost_key = target.manhattan_distance(neighbor_node->coordinate);
-    };
-    auto set_as_visited2 = [source, &current_node2](Node *neighbor_node)
-    {
-        neighbor_node->previous = current_node2;
-        neighbor_node->prior_move =
-            (neighbor_node->coordinate.x - current_node2->coordinate.x)
-                ? ((neighbor_node->coordinate.x - current_node2->coordinate.x == -1) ? 'e' : 'w')
-                : ((neighbor_node->coordinate.y - current_node2->coordinate.y == -1) ? 's' : 'n');
-        neighbor_node->visit_id = current_node2->visit_id;
-        neighbor_node->cost_key = source.manhattan_distance(neighbor_node->coordinate);
-    };
-
-    // track starting neighbors
-    for (Node *neighbor_node : source_node1->nexts)
-    {
-        set_as_visited1(neighbor_node);
-        try // TODO
-        {
-            open_set1->push(neighbor_node);
-        }
-        catch (const std::out_of_range &e)
-        {
-            PRINT source << target << NL;
-            throw e;
-        }
-    }
-    for (Node *neighbor_node : source_node2->nexts)
-    {
-        set_as_visited2(neighbor_node);
-        try // TODO
-        {
-            open_set2->push(neighbor_node);
-        }
-        catch (const std::out_of_range &e)
-        {
-            PRINT source << target << NL;
-            throw e;
-        }
-    }
-
-    // search path to target
-    while (!open_set1->empty())
-    {
-        try // TODO
-        {
-            current_node1 = open_set1->pop();
-        }
-        catch (const std::out_of_range &e)
-        {
-            PRINT source << target << NL;
-            throw e;
-        }
-
-        try // TODO
-        {
-            current_node2 = open_set2->pop();
-        }
-        catch (const std::out_of_range &e)
-        {
-            PRINT source << target << NL;
-            throw e;
-        }
-
-        // check if target has been reached
-        if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
-        {
-            // PRINT "Voxelgraph: This Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
-            // PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                            // TODO
-            open_set1->clear();
-            Route route;
-            current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
-            while (current_node1 != source_node1)
-            {
-                route.push_back(current_node1->prior_move);
-                current_node1 = current_node1->previous;
-            }
-            std::reverse(route.begin(), route.end());
-            while (current_node2 != source_node2)
-            {
-                route.push_back(current_node2->prior_move);
-                current_node2 = current_node2->previous;
-            }
-            return route;
-        }
-
-        // track new neighbors
-        for (Node *neighbor_node : current_node1->nexts)
-        {
-            if (neighbor_node IS_VISITED)
-                continue;
-            set_as_visited1(neighbor_node);
-            try // TODO
-            {
-                open_set2->push(neighbor_node);
-            }
-            catch (const std::out_of_range &e)
-            {
-                PRINT source << target << NL;
-                throw e;
-            }
-        }
-        for (Node *neighbor_node : current_node2->nexts)
-        {
-            if (neighbor_node IS_VISITED)
-                continue;
-            set_as_visited2(neighbor_node);
-            try // TODO
-            {
-                open_set2->push(neighbor_node);
-            }
-            catch (const std::out_of_range &e)
-            {
-                PRINT source << target << NL;
-                throw e;
-            }
-        }
-    }
-
-    // when no path is found
-    open_set1->clear();
-    throw Untraversable(source, target);
-}
-
-Route VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &target)
 {
     // check source validity
     if (not_in_bounds(source))
@@ -584,7 +425,7 @@ Route VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &target)
     }
 
     // search path to target
-    while (!open_set1->empty())
+    while (!open_set1->empty() && !open_set2->empty())
     {
         current_node1 = open_set1->pop();
         current_node2 = open_set2->pop();
@@ -595,6 +436,7 @@ Route VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &target)
             // PRINT "Voxelgraph: This Evolving-Heuristic Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
             // PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                                               // TODO
             open_set1->clear();
+            open_set2->clear();
             Route route;
             current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
             while (current_node1 != source_node1)
@@ -630,6 +472,7 @@ Route VoxelGraph::EHBDGBeFS(const Coordinate &source, const Coordinate &target)
 
     // when no path is found
     open_set1->clear();
+    open_set2->clear();
     throw Untraversable(source, target);
 }
 

@@ -33,14 +33,14 @@ public:
     VoxelGraph(std::istream &stream);
 
     size_t node_count() const;
+    std::vector<Coordinate> find_all_valid_position() const;
     size_t find_max_distance() const;
     std::vector<TravelPlan> find_all_travel_plans(size_t minimum_distance = 2) const;
 
     // path find funcitons
-    Route GBeFS(const Coordinate &source, const Coordinate &target);     // greedy best first search
-    Route RGBeFS(const Coordinate &source, const Coordinate &target);    // reverse GBeFS
-    Route BDGBeFS(const Coordinate &source, const Coordinate &target);   // bidirectional GBeFS
-    Route EHBDGBeFS(const Coordinate &source, const Coordinate &target); // evolving-heuristic BDGBeFS
+    Route GBeFS(const Coordinate &source, const Coordinate &target);   // greedy best first search
+    Route RGBeFS(const Coordinate &source, const Coordinate &target);  // reverse GBeFS
+    Route BDGBeFS(const Coordinate &source, const Coordinate &target); // bidirectional GBeFS (dynamic heuristic)
 
     ~VoxelGraph();
 };

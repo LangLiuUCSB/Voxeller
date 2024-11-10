@@ -1,49 +1,41 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2
+CXXFLAGS = -std=c++17 -Wall -Wextra -O3
 
 # Source and object files
 SRCS = main.cpp VoxelGraph.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Test files (0=info, 1=random, 2=specific)
-TEST_SRCS = test_2.cpp
+TEST_SRCS = test_0.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 TEST_TARGETS = $(TEST_SRCS:.cpp=)
 
 # Target executable for main
 TARGET = main
 
-# Default target
-all: $(TARGET)
+all: $(TARGET)# Default target
 
-# Link the main object files to create the main executable
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJS) # Link the main object files to create the main executable
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
-# Compile and link each test file separately
-$(TEST_TARGETS): %: %.o VoxelGraph.o
+$(TEST_TARGETS): %: %.o VoxelGraph.o # Compile and link each test file separately
 	$(CXX) $(CXXFLAGS) -o $@ $^ 
 
-# Compile .cpp files to .o files
-%.o: %.cpp
+%.o: %.cpp # Compile .cpp files to .o files
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Run the test executable
-test: $(TEST_TARGETS)
-	./test_2
+test: $(TEST_TARGETS) # Run the test executable
+	./test_0
 
-# Run the main executable
-run: $(TARGET)
+run: $(TARGET) # Run the main executable
 	./main
 
-# Run leak check on main executable
-leaks: $(TARGET)
+leaks: $(TARGET) # Run leak check on main executable
 	leaks --atExit -- ./main
 
-# Clean up object files and executables
-clean:
+clean:# Clean up object files and executables
 	rm -f $(OBJS) $(TEST_OBJS) $(TARGET) $(TEST_TARGETS)
 
-# Phony targets
-.PHONY: all clean run leaks
+.PHONY: # Phony targets
+	all clean run leaks
