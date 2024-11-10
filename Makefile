@@ -7,7 +7,7 @@ SRCS = main.cpp VoxelGraph.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Test files (0=info, 1=random, 2=specific)
-TEST_SRCS = test_0.cpp
+TEST_SRCS = test_2.cpp
 TEST_OBJS = $(TEST_SRCS:.cpp=.o)
 TEST_TARGETS = $(TEST_SRCS:.cpp=)
 
@@ -26,7 +26,7 @@ $(TEST_TARGETS): %: %.o VoxelGraph.o # Compile and link each test file separatel
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 test: $(TEST_TARGETS) # Run the test executable
-	./test_0
+	./test_2
 
 run: $(TARGET) # Run the main executable
 	./main

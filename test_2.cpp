@@ -7,7 +7,7 @@
 int main()
 {
     // data to stream
-    auto data = "worlds/fortress.vox";
+    auto data = "worlds/platformer.vox";
     std::ifstream stream(data);
     if (stream.fail())
     {
@@ -27,11 +27,11 @@ int main()
     stream.close();
 
     // set source and target coordinates
-    const Coordinate source(4, 2, 1), target(64, 42, 36);
+    const Coordinate source(0, 23, 1), target(23, 0, 1);
 
     // find path
-    chronometrize(vg, &VoxelGraph::GBeFS, source, target);
-    chronometrize(vg, &VoxelGraph::RGBeFS, source, target); // roughly 7% faster than basic non-reverse GBeFS on average
+    // chronometrize(vg, &VoxelGraph::GBeFS, source, target);
+    // chronometrize(vg, &VoxelGraph::RGBeFS, source, target);
     chronometrize(vg, &VoxelGraph::BDGBeFS, source, target);
 
     PRINT std::endl;

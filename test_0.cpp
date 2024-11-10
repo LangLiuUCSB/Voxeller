@@ -7,14 +7,16 @@
 int main()
 {
     // data to stream
-    auto data = "worlds/fortress.vox";
-    std::ifstream stream(data);
+    auto world_name = "goop";
+    std::string file_path = "worlds/";
+    file_path.append(world_name).append(".vox");
+    std::ifstream stream(file_path);
     if (stream.fail())
     {
-        ERROR "ERROR: Could not open file: " << data << NL;
+        ERROR "ERROR: Could not open file: " << file_path << NL;
         return 1;
     }
-    PRINT "\nFilepath: " << data << NL;
+    PRINT "\nFilepath: " << file_path << NL;
 
     Chronometer XPOHOMETP;
 
@@ -49,7 +51,10 @@ int main()
     // find all valid positions
     std::vector<Coordinate> positions = vg.find_all_valid_position();
 
-    std::ofstream out_file("outputs/travel_plans.txt");
+    std::string output_path = "outputs/";
+    output_path.append(world_name);
+    output_path.append("_positions.txt");
+    std::ofstream out_file(output_path);
     if (!out_file)
     {
         std::cerr << "Error opening file for writing!" << std::endl;
