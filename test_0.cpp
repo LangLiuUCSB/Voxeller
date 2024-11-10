@@ -26,24 +26,40 @@ int main()
 
     stream.close();
 
-    // find how many valid positions are there
+    // count how many valid positions are there
     size_t num_valid_positions;
     XPOHOMETP.set_hi_res_start();
     num_valid_positions = vg.node_count();
     XPOHOMETP.set_hi_res_end();
     PRINT "Count time: " << XPOHOMETP.get_us() << " microseconds\n"
                          << "This world has " << num_valid_positions
-                         << " valid positions.\nThis world has " << num_valid_positions * num_valid_positions
+                         << " valid positions.\nThis world has "
+                         << num_valid_positions * num_valid_positions
                          << " unique travel plans.\n\n";
 
-    // find all valid travel plans
+    // find max distance
     size_t max_distance;
-    XPOHOMETP.set_hi_res_start();
+    XPOHOMETP.set_steady_start();
     max_distance = vg.find_max_distance();
-    XPOHOMETP.set_hi_res_end();
-    PRINT "Total pairing time: " << XPOHOMETP.get_us() << " microseconds\n"
-                                 << "Largest distance between two positions is " << max_distance
-                                 << ".\n\n";
+    XPOHOMETP.set_steady_end();
+    PRINT "Total pairing time: " << XPOHOMETP.get_ms() << " milliseconds\n"
+                                 << "Largest distance between two positions is "
+                                 << max_distance << ".\n\n";
+
+    // find all valid positions
+    std::vector<Coordinate> positions = vg.find_all_valid_position();
+
+    std::ofstream out_file("outputs/travel_plans.txt");
+    if (!out_file)
+    {
+        std::cerr << "Error opening file for writing!" << std::endl;
+        return 1;
+    }
+
+    for (size_t i = 0; i < positions.size(); ++i)
+        out_file << positions[i].x << ' '
+                 << positions[i].y << ' '
+                 << positions[i].z << NL;
 
     return 0;
 }
