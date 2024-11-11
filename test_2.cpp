@@ -34,7 +34,7 @@ int main()
     // chronometrize(vg, &VoxelGraph::RGBeFS, source, target);
     chronometrize(vg, &VoxelGraph::BDGBeFS, source, target);
 
-    PRINT std::endl;
+    PRINT "SUCCESS!" << std::endl;
 
     return 0;
 }
