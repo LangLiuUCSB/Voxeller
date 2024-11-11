@@ -17,7 +17,7 @@ class VoxelGraph
     int x_limit, y_limit, z_limit; // TODO find a way to const correct
     size_t map_area, map_volume;
 
-    Node **node_map;
+    std::unordered_map<size_t, Node *> *node_map;
     BinaryHeap<Node *, NodePtrMinHeapComparator> *open_set1, *open_set2;
 
     size_t current_visit_id = 0;

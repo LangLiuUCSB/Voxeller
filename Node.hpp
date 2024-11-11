@@ -8,6 +8,7 @@
 struct Node
 {
     const Coordinate coordinate;
+    Node *inverse;
     std::vector<Node *> nexts;
     Node *previous;
     char prior_move;

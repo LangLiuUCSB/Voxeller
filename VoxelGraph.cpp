@@ -17,8 +17,6 @@
 #define GO_DOWN -map_area
 #define FALL -= map_area
 
-#define INVERSE -map_area
-
 #define HAS_NEIGHBOR < 4
 
 #define IS_VISITED ->visit_id == current_visit_id
@@ -29,8 +27,10 @@ VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
 
     uint8_t schematic[(map_area = x_limit * y_limit)]; // initialize schematic
 
-    node_map = new Node *[map_volume = map_area * z_limit]; // initialize graph
-    std::memset(node_map, 0, map_volume * sizeof(Node *));
+    map_volume = map_area * z_limit;
+
+    node_map = new std::unordered_map<size_t, Node *>; // initialize graph
+    node_map->reserve(map_area * (z_limit / 2));
 
     // populate schematic
     std::string row;
@@ -46,14 +46,14 @@ VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
     // helper lambda functions
     auto landing = [this](size_t index)
     {
-        while (node_map[index] == nullptr)
+        while (node_map->find(index) == node_map->end())
             index FALL;
         return index;
     };
     auto directed_link = [this](size_t from, size_t to)
     {
-        node_map[from]->nexts.push_back(node_map[to]);
-        node_map[to INVERSE]->nexts.push_back(node_map[from INVERSE]);
+        node_map->at(from)->nexts.push_back(node_map->at(to));
+        node_map->at(to)->inverse->nexts.push_back(node_map->at(from)->inverse);
     };
 
     // populate graph
@@ -78,8 +78,9 @@ VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
                         schematic[schematic_index] UPDATE;
                         if (schematic[schematic_index] == NEW_NODE)
                         {
-                            node_map[current_index] = new Node(Coordinate(x, y, z));
-                            node_map[current_index INVERSE] = new Node(Coordinate(x, y, z));
+                            node_map->emplace(current_index, new Node(Coordinate(x, y, z)));
+                            node_map->at(current_index)->inverse = new Node(Coordinate(x, y, z));
+                            node_map->at(current_index)->inverse->inverse = node_map->at(current_index);
                             size_t node_index = current_index;
                             if (x != 0 && schematic[schematic_index GO_WEST] HAS_NEIGHBOR)
                             {
@@ -142,7 +143,7 @@ size_t VoxelGraph::node_count() const
     size_t count = 0;
     for (size_t i = map_area; i < map_volume; ++i)
     {
-        if (node_map[i] != nullptr && i == coordinate_to_index(node_map[i]->coordinate))
+        if (node_map->at(i) != nullptr)
         {
             ++count;
         }
@@ -155,9 +156,9 @@ std::vector<Coordinate> VoxelGraph::find_all_valid_position() const
     std::vector<Coordinate> positions;
     for (size_t i = map_area; i < map_volume; ++i)
     {
-        if (node_map[i] != nullptr && i == coordinate_to_index(node_map[i]->coordinate))
+        if (node_map->at(i) != nullptr)
         {
-            positions.emplace_back(node_map[i]->coordinate);
+            positions.emplace_back(node_map->at(i)->coordinate);
         }
     }
     return positions;
@@ -168,16 +169,14 @@ size_t VoxelGraph::find_max_distance() const
     size_t max_distance = 0;
     for (size_t i = map_area; i < map_volume; ++i)
     {
-        if (node_map[i] != nullptr &&
-            i == coordinate_to_index(node_map[i]->coordinate))
+        if (node_map->at(i) != nullptr)
         {
             for (size_t j = map_area; j < map_volume; ++j)
             {
-                if (node_map[j] != nullptr &&
-                    j == coordinate_to_index(node_map[j]->coordinate) &&
-                    node_map[i]->coordinate.manhattan_distance(node_map[j]->coordinate) > max_distance)
+                if (node_map->at(j) != nullptr &&
+                    node_map->at(i)->coordinate.manhattan_distance(node_map->at(j)->coordinate) > max_distance)
                 {
-                    max_distance = node_map[i]->coordinate.manhattan_distance(node_map[j]->coordinate);
+                    max_distance = node_map->at(i)->coordinate.manhattan_distance(node_map->at(j)->coordinate);
                 }
             }
         }
@@ -190,14 +189,14 @@ std::vector<TravelPlan> VoxelGraph::find_all_travel_plans(size_t minimum_distanc
     std::vector<TravelPlan> travel_plans;
     for (size_t i = map_area; i < map_volume; ++i)
     {
-        if (node_map[i] != nullptr && i == coordinate_to_index(node_map[i]->coordinate))
+        if (node_map->at(i) != nullptr)
         {
             for (size_t j = map_area; j < map_volume; ++j)
             {
-                if (node_map[j] != nullptr && j == coordinate_to_index(node_map[j]->coordinate) &&
-                    node_map[i]->coordinate.manhattan_distance(node_map[j]->coordinate) >= minimum_distance)
+                if (node_map->at(j) != nullptr &&
+                    node_map->at(i)->coordinate.manhattan_distance(node_map->at(j)->coordinate) >= minimum_distance)
                 {
-                    travel_plans.emplace_back(node_map[i]->coordinate, node_map[j]->coordinate);
+                    travel_plans.emplace_back(node_map->at(i)->coordinate, node_map->at(j)->coordinate);
                 }
             }
         }
@@ -210,7 +209,7 @@ Route VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target)
     // check source validity
     if (not_in_bounds(source))
         throw InvalidCoordinate(source);
-    Node *source_node = node_map[coordinate_to_index(source)];
+    Node *source_node = node_map->at(coordinate_to_index(source));
     if (source_node == nullptr)
         throw InvalidCoordinate(source);
 
@@ -221,7 +220,7 @@ Route VoxelGraph::GBeFS(const Coordinate &source, const Coordinate &target)
     // check target validity
     if (not_in_bounds(target))
         throw InvalidCoordinate(target);
-    Node *target_node = node_map[coordinate_to_index(target)];
+    Node *target_node = node_map->at(coordinate_to_index(target));
     if (target_node == nullptr)
         throw InvalidCoordinate(target);
 
@@ -287,7 +286,7 @@ Route VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
     // check source validity
     if (not_in_bounds(target))
         throw InvalidCoordinate(target);
-    Node *source_node = node_map[coordinate_to_index(target) INVERSE];
+    Node *source_node = node_map->at(coordinate_to_index(target))->inverse;
     if (source_node == nullptr)
         throw InvalidCoordinate(target);
 
@@ -298,7 +297,7 @@ Route VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
     // check target validity
     if (not_in_bounds(source))
         throw InvalidCoordinate(source);
-    Node *target_node = node_map[coordinate_to_index(source) INVERSE];
+    Node *target_node = node_map->at(coordinate_to_index(source))->inverse;
     if (target_node == nullptr)
         throw InvalidCoordinate(source);
 
@@ -340,6 +339,7 @@ Route VoxelGraph::RGBeFS(const Coordinate &source, const Coordinate &target)
                 route.push_back(current_node->prior_move);
                 current_node = current_node->previous;
             }
+
             return route;
         }
 
@@ -363,7 +363,7 @@ Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
     // check source validity
     if (not_in_bounds(source))
         throw InvalidCoordinate(source);
-    Node *source_node1 = node_map[coordinate_to_index(source)];
+    Node *source_node1 = node_map->at(coordinate_to_index(source));
     if (source_node1 == nullptr)
         throw InvalidCoordinate(source);
 
@@ -374,7 +374,7 @@ Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
     // check target validity
     if (not_in_bounds(target))
         throw InvalidCoordinate(target);
-    Node *target_node1 = node_map[coordinate_to_index(target)];
+    Node *target_node1 = node_map->at(coordinate_to_index(target));
     if (target_node1 == nullptr)
         throw InvalidCoordinate(target);
 
@@ -382,8 +382,8 @@ Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
     source_node1->visit_id = ++current_visit_id;
     target_node1->cost_key = 0;
 
-    Node *source_node2 = node_map[coordinate_to_index(target) INVERSE];
-    Node *target_node2 = node_map[coordinate_to_index(source) INVERSE];
+    Node *source_node2 = node_map->at(coordinate_to_index(target))->inverse;
+    Node *target_node2 = node_map->at(coordinate_to_index(source))->inverse;
 
     source_node2->visit_id = current_visit_id;
     target_node2->cost_key = 0;
@@ -431,14 +431,14 @@ Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
         current_node2 = open_set2->pop();
 
         // check if target has been reached
-        if (node_map[coordinate_to_index(current_node1->coordinate) INVERSE] IS_VISITED)
+        if (current_node1->inverse IS_VISITED)
         {
             // PRINT "Voxelgraph: This Evolving-Heuristic Bidirectional GBeFS from " << source << " to " << target << " took " << i << " turns.\n"; // TODO
-            // PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n";                                               // TODO
+            // PRINT "Voxelgraph: The two searches joined at " << current_node1->coordinate << ".\n"; // TODO
             open_set1->clear();
             open_set2->clear();
             Route route;
-            current_node2 = node_map[coordinate_to_index(current_node1->coordinate) INVERSE];
+            current_node2 = current_node1->inverse;
             while (current_node1 != source_node1)
             {
                 route.push_back(current_node1->prior_move);
@@ -478,10 +478,12 @@ Route VoxelGraph::BDGBeFS(const Coordinate &source, const Coordinate &target)
 
 VoxelGraph::~VoxelGraph()
 {
-    for (size_t i = 0; i < map_volume; ++i)
-        if (node_map[i])
-            delete node_map[i];
-    delete[] node_map;
+    for (auto &pair : *node_map)
+    {
+        delete pair.second->inverse;
+        delete pair.second;
+    }
+    delete node_map;
     delete open_set1;
     delete open_set2;
 }
