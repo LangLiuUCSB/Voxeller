@@ -14,6 +14,7 @@ struct Node
     size_t visit_id = 0;
     int cost_key;
     Node(Coordinate coordinate) : coordinate(coordinate) {}
+    // TODO Node(Coordinate coordinate, size_t max_nexts) : coordinate(coordinate) { nexts.reserve(max_nexts); }
 };
 
 struct NodePtrMinHeapComparator

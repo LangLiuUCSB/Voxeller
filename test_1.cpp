@@ -55,8 +55,9 @@ int main()
         }
         search_times.push_back(search_time);
     }
-    PRINT "average search time of basic GBeFS: " << average(search_times) << " microseconds" << std::endl;
+    PRINT "average search time of basic GBeFS: " << average(search_times) << " microseconds" << NL;
 
+    PRINT "SUCCESS" << std::endl;
     return 0;
 }
 /*

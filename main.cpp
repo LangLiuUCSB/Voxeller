@@ -7,7 +7,7 @@
 int main()
 {
     // data to stream
-    auto data = "worlds/sandwich.vox";
+    auto data = "worlds/platformer.vox";
     std::ifstream stream(data);
     if (stream.fail())
     {
@@ -22,10 +22,13 @@ int main()
     XPOHOMETP.set_hi_res_start();
     VoxelGraph vg(stream);
     XPOHOMETP.set_hi_res_end();
-    PRINT "Initialization time: " << XPOHOMETP.get_us() << " microseconds\n\n";
+    PRINT "Initialization time: " << XPOHOMETP.get_us() << " microseconds\n";
 
     stream.close();
 
+    vg.make_super_graph();
+
+    PRINT "SUCCESS" << std::endl;
     return 0;
 }
 

@@ -66,5 +66,6 @@ int main()
                  << positions[i].y << ' '
                  << positions[i].z << NL;
 
+    PRINT "SUCCESS" << std::endl;
     return 0;
 }

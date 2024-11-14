@@ -52,8 +52,8 @@ VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
     };
     auto directed_link = [this](size_t from, size_t to)
     {
-        node_map[from]->nexts.push_back(node_map[to]);
-        node_map[to INVERSE]->nexts.push_back(node_map[from INVERSE]);
+        node_map[from]->nexts.emplace_back(node_map[to]);
+        node_map[to INVERSE]->nexts.emplace_back(node_map[from INVERSE]);
     };
 
     // populate graph
@@ -135,6 +135,33 @@ VoxelGraph::VoxelGraph(std::istream &stream) // TODO bad parse handling
     // initialize open sets
     open_set1 = new BinaryHeap<Node *, NodePtrMinHeapComparator>(map_volume, NodePtrMinHeapComparator());
     open_set2 = new BinaryHeap<Node *, NodePtrMinHeapComparator>(map_volume, NodePtrMinHeapComparator());
+}
+
+void VoxelGraph::make_super_graph()
+{
+    ++current_visit_id;
+    // Find first node in map
+    std::stack<Node *> Kosaraju_stack;
+    for (size_t i = map_area; i < map_volume; ++i)
+    {
+        if (node_map[i] == nullptr ||
+            node_map[i] IS_VISITED ||
+            i != coordinate_to_index(node_map[i]->coordinate))
+            continue;
+        dfs1(node_map[i], Kosaraju_stack);
+    }
+
+    while (!Kosaraju_stack.empty())
+    {
+        Node *current_node = Kosaraju_stack.top();
+        Kosaraju_stack.pop();
+        if (node_map[coordinate_to_index(current_node->coordinate) INVERSE] IS_VISITED)
+            continue;
+        SCC scc;
+        dfs2(node_map[coordinate_to_index(current_node->coordinate) INVERSE], scc);
+        super_graph.push_back(scc);
+    }
+    PRINT super_graph.size();
 }
 
 size_t VoxelGraph::node_count() const

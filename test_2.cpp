@@ -27,14 +27,13 @@ int main()
     stream.close();
 
     // set source and target coordinates
-    const Coordinate source(0, 23, 1), target(23, 0, 1);
+    const Coordinate source(0, 11, 1), target(15, 0, 1);
 
     // find path
     // chronometrize(vg, &VoxelGraph::GBeFS, source, target);
     // chronometrize(vg, &VoxelGraph::RGBeFS, source, target);
     chronometrize(vg, &VoxelGraph::BDGBeFS, source, target);
 
-    PRINT std::endl;
-
+    PRINT "SUCCESS" << std::endl;
     return 0;
 }
