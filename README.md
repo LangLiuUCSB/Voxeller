@@ -4,7 +4,6 @@ Voxeller is a pathfinding agent developed by Lang Liu, an undergraduate student 
 
 ## TODO STACK
 
-- precompute strongly conneted components
 - fork-join parallelism
 - path storage and subset search
 - benchmark other types of heaps
