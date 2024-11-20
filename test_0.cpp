@@ -69,3 +69,19 @@ int main()
     PRINT "SUCCESS" << std::endl;
     return 0;
 }
+
+/*
+    std::ofstream outFile("outputs/raw.bin", std::ios::binary);
+
+    if (!outFile)
+    {
+        std::cerr << "Error opening file for writing!" << std::endl;
+        return 1;
+    }
+
+    const char data[] = {0, 1, 2, 3, 5};
+    outFile.write(data, sizeof(data));
+
+    outFile.close();
+    std::cout << "Data successfully written to file!" << std::endl;
+*/

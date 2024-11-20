@@ -47,7 +47,7 @@ int main()
         double search_time;
         try
         {
-            search_time = get_time(vg, &VoxelGraph::BDGBeFS, tp.source, tp.target);
+            search_time = get_time(vg, &VoxelGraph::greedy_best_first_search, tp.source, tp.target);
         }
         catch (const std::exception &e)
         {
@@ -55,7 +55,7 @@ int main()
         }
         search_times.push_back(search_time);
     }
-    PRINT "average search time of basic GBeFS: " << average(search_times) << " microseconds" << NL;
+    PRINT "average search time: " << average(search_times) << " microseconds" << NL;
 
     PRINT "SUCCESS" << std::endl;
     return 0;

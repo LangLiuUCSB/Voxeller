@@ -7,7 +7,7 @@
 int main()
 {
     // data to stream
-    auto data = "worlds/platformer.vox";
+    auto data = "worlds/fortress.vox";
     std::ifstream stream(data);
     if (stream.fail())
     {
@@ -27,12 +27,22 @@ int main()
     stream.close();
 
     // set source and target coordinates
-    const Coordinate source(0, 11, 1), target(15, 0, 1);
+    // const Coordinate source(4, 2, 1), target(63, 41, 37); // fortress
+    const Coordinate source(4, 2, 1), target(64, 41, 31); // fortress untraversable
+    // const Coordinate source(3, 0, 1), target(7, 0, 1);
 
-    // find path
-    // chronometrize(vg, &VoxelGraph::GBeFS, source, target);
-    // chronometrize(vg, &VoxelGraph::RGBeFS, source, target);
-    chronometrize(vg, &VoxelGraph::BDGBeFS, source, target);
+    chronometrize(vg, &VoxelGraph::greedy_best_first_search, source, target);
+
+    chronometrize(vg, &VoxelGraph::greedy_best_first_search, source, target);
+    chronometrize(vg, &VoxelGraph::reverse_greedy_best_first_search, source, target);
+
+    XPOHOMETP.set_hi_res_start();
+    vg.condense_graph();
+    XPOHOMETP.set_hi_res_end();
+    PRINT "Condensation time: " << XPOHOMETP.get_us() << " microseconds\n\n";
+
+    chronometrize(vg, &VoxelGraph::super_greedy_best_first_search, source, target);
+    chronometrize(vg, &VoxelGraph::reverse_super_greedy_best_first_search, source, target);
 
     PRINT "SUCCESS" << std::endl;
     return 0;
