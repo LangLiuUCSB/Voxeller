@@ -1,53 +1,40 @@
-#include "testing_tools.hpp"
+#include "Coordinate.hpp"
+#include "Chronometer.hpp"
+#include "Lattice.hpp"
 
-#include <fstream>
+#include <iostream>
+// #include <fstream>
 
-#define HELP PRINT "HELP~test_specific\n"
-
+// LLVM C++ Style Guide Ruler 100 -----------------------------------------------------------------|
 int main()
 {
-    // data to stream
-    auto data = "worlds/platformer.vox";
-    std::ifstream stream(data);
-    if (stream.fail())
+    std::ostream &log = std::cout;
+    Chronometer X;
+
+    std::string world_name;
+    // log << "enter world name: ";
+    // std::cin >> world_name;
+    world_name = "platformer";
+
+    using FilePath = std::string;
+    FilePath file_path = "worlds/" + world_name + ".vox";
+
+    Lattice lattice;
+
+    X.set_hi_res_start();
+    try
     {
-        ERROR "ERROR: Could not open file: " << data << NL;
-        return 1;
+        lattice = Lattice(file_path);
     }
-    PRINT "\nFilepath: " << data << NL;
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << '\n';
+        return EXIT_FAILURE
+    }
+    X.set_hi_res_end();
 
-    Chronometer XPOHOMETP;
+    log << "Initialization time: " << X.get_us() << " microseconds\n\n";
 
-    // stream to VoxelGraph
-    XPOHOMETP.set_hi_res_start();
-    VoxelGraph vg(stream);
-    XPOHOMETP.set_hi_res_end();
-    PRINT "Initialization time: " << XPOHOMETP.get_us() << " microseconds\n\n";
-
-    stream.close();
-
-    // set source and target coordinates
-    // const Coordinate source(4, 2, 1), target(63, 41, 37); // fortress
-    // const Coordinate source(4, 2, 1), target(64, 41, 31); // fortress untraversable
-    const Coordinate source(3, 0, 1), target(7, 0, 1);
-
-    /*
-    chronometrize(vg, &VoxelGraph::greedy_best_first_search, source, target);
-
-    chronometrize(vg, &VoxelGraph::greedy_best_first_search, source, target);
-    chronometrize(vg, &VoxelGraph::reverse_greedy_best_first_search, source, target);
-
-    XPOHOMETP.set_hi_res_start();
-    vg.condense_graph();
-    XPOHOMETP.set_hi_res_end();
-    PRINT "Condensation time: " << XPOHOMETP.get_us() << " microseconds\n\n";
-
-    chronometrize(vg, &VoxelGraph::super_greedy_best_first_search, source, target);
-    chronometrize(vg, &VoxelGraph::reverse_super_greedy_best_first_search, source, target);
-    */
-
-    chronometrize(vg, &VoxelGraph::bidirectional_best_first_search, source, target);
-
-    PRINT "SUCCESS" << std::endl;
-    return 0;
+    log << "SUCCESS" << std::endl;
+    return EXIT_SUCCESS;
 }

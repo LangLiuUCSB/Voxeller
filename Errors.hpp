@@ -5,15 +5,14 @@
 
 struct InvalidCoordinate
 {
-    Coordinate coordinate;
-    InvalidCoordinate(Coordinate coordinate) : coordinate(coordinate) {}
+    const Coordinate coordinate;
+    InvalidCoordinate(Coordinate &coordinate) noexcept : coordinate(coordinate) {}
 };
 
 struct Untraversable
 {
-    Coordinate source;
-    Coordinate target;
-    Untraversable(Coordinate source, Coordinate target) : source(source), target(target) {}
+    const Coordinate source, target;
+    Untraversable(Coordinate &source, Coordinate &target) noexcept : source(source), target(target) {}
 };
 
 #endif
