@@ -14,7 +14,7 @@ int main()
     std::string world_name;
     // log << "enter world name: ";
     // std::cin >> world_name;
-    world_name = "goop";
+    world_name = "donkeykong";
     FilePath file_path = "worlds/" + world_name + ".vox";
     log << file_path << "\n\n";
 
@@ -33,14 +33,15 @@ int main()
     log << "Initialization time: " << X.get_us() << " microseconds\n\n";
 
     // const TripPlan trip_plan(Coordinate(3, 0, 1), Coordinate(7, 0, 1)); // platformer
-    // const TripPlan trip_plan(Coordinate(4, 2, 1), Coordinate(63, 41, 37)); // fortress
-    const TripPlan trip_plan(Coordinate(32, 64, 51), Coordinate(48, 14, 39)); // goop
+    //  const TripPlan trip_plan(Coordinate(4, 2, 1), Coordinate(63, 41, 37)); // fortress
+    // const TripPlan trip_plan(Coordinate(32, 64, 51), Coordinate(48, 14, 39)); // goop
+    const TripPlan trip_plan(Coordinate(5, 0, 9), Coordinate(3, 0, 1)); // donkeykong
     Lattice::Route route;
     X.set_hi_res_start();
 
     try
     {
-        route = lattice.search(trip_plan, Lattice::GBFS);
+        route = lattice.search(trip_plan, Lattice::BIDIRECTIONAL_GBFS);
     }
     catch (const std::exception &e)
     {
@@ -59,7 +60,7 @@ int main()
     X.set_hi_res_start();
     try
     {
-        route = lattice.super_search(trip_plan, Lattice::A_STAR, Lattice::REVERSE_GBFS);
+        route = lattice.super_search(trip_plan, Lattice::BIDIRECTIONAL_GBFS, Lattice::BIDIRECTIONAL_GBFS);
     }
     catch (const std::exception &e)
     {
