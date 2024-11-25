@@ -42,7 +42,6 @@ public:
     size_t super_node_count() const noexcept { return congraph.size(); }
 
     void condense() noexcept;
-    void forecast() noexcept;
     Route search(TripPlan trip_plan, SearchMode search_mode) const;
     Route super_search(TripPlan trip_plan,
                        SearchMode super_search_mode,
@@ -75,9 +74,6 @@ private:
     Route jps(Node *source, Node *target) const;
     Route rjps(Node *source, Node *target) const;
     Route bdjps(Node *source, Node *target) const;
-    Route ucs(Node *source, Node *target) const;
-    Route rucs(Node *source, Node *target) const;
-    Route bducs(Node *source, Node *target) const;
 
     Route super_dfs(Node *source, Node *target, SearchMode sub_search_mode) const;
     Route super_rdfs(Node *source, Node *target, SearchMode sub_search_mode) const;
@@ -100,37 +96,31 @@ private:
     Route super_jps(Node *source, Node *target, SearchMode sub_search_mode) const;
     Route super_rjps(Node *source, Node *target, SearchMode sub_search_mode) const;
     Route super_bdjps(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_ucs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rucs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bducs(Node *source, Node *target, SearchMode sub_search_mode) const;
 };
 
 enum Lattice::SearchMode : char
 {
-    DFS,
+    DFS, // Depth-First Search
     REVERSE_DFS,
     BIDIRECTIONAL_DFS,
-    BFS,
+    BFS, // Breadth-First Search
     REVERSE_BFS,
     BIDIRECTIONAL_BFS,
-    GBFS,
+    GBFS, // Greedy Best-First Search
     REVERSE_GBFS,
     BIDIRECTIONAL_GBFS,
-    A_STAR,
+    A_STAR, // A* Search
     REVERSE_A_STAR,
     BIDIRECTIONAL_A_STAR,
-    NEGATIVE_GBFS,
+    NEGATIVE_GBFS, // Max-Heap Greedy Best-First Search
     REVERSE_NEGATIVE_GBFS,
     BIDIRECTIONAL_NEGATIVE_GBFS,
-    NEGATIVE_A_STAR,
+    NEGATIVE_A_STAR, // Max-Heap A* Search
     REVERSE_NEGATIVE_A_STAR,
     BIDIRECTIONAL_NEGATIVE_A_STAR,
-    JPS,
+    JPS, // Jump Point Search
     REVERSE_JPS,
     BIDIRECTIONAL_JPS,
-    UCS,
-    REVERSE_UCS,
-    BIDIRECTIONAL_UCS
 };
 
 #endif

@@ -1,5 +1,5 @@
-#include "Coordinate.hpp"
 #include "Chronometer.hpp"
+#include "Coordinate.hpp"
 #include "Lattice.hpp"
 #include "TripPlan.hpp"
 
@@ -40,7 +40,7 @@ int main()
 
     try
     {
-        route = lattice.search(trip_plan, Lattice::BIDIRECTIONAL_GBFS);
+        route = lattice.search(trip_plan, Lattice::GBFS);
     }
     catch (const std::exception &e)
     {
@@ -55,11 +55,6 @@ int main()
     lattice.condense();
     X.set_hi_res_end();
     log << "Condensation time: " << X.get_us() << " microseconds\n\n";
-
-    X.set_hi_res_start();
-    lattice.forecast();
-    X.set_hi_res_end();
-    log << "Forecasting time: " << X.get_us() << " microseconds\n\n";
 
     X.set_hi_res_start();
     try
@@ -77,3 +72,4 @@ int main()
     log << "SUCCESS" << std::endl;
     return EXIT_SUCCESS;
 }
+// LLVM C++ Style Guide Ruler 100 -----------------------------------------------------------------|
