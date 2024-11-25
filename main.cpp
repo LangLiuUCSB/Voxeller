@@ -59,7 +59,7 @@ int main()
     X.set_hi_res_start();
     try
     {
-        route = lattice.super_search(trip_plan, Lattice::REVERSE_GBFS, Lattice::REVERSE_GBFS);
+        route = lattice.super_search(trip_plan, Lattice::A_STAR, Lattice::REVERSE_GBFS);
     }
     catch (const std::exception &e)
     {
