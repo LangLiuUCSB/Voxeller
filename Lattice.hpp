@@ -41,6 +41,7 @@ public:
     size_t node_count() const noexcept { return graph.size(); }
     size_t super_node_count() const noexcept { return congraph.size(); }
 
+    void parse(const FilePath &file_path);
     void condense() noexcept;
     Route search(TripPlan trip_plan, SearchMode search_mode) const;
     Route super_search(TripPlan trip_plan,
