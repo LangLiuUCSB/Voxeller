@@ -7,6 +7,6 @@ Voxeller is a pathfinding agent developed by Lang Liu, an undergraduate student 
 - fork-join parallelism
 - path storage and subset search
 - benchmark other types of heaps
-- upgrade BDGBeFS search through improving dynamic heuristic
+- heuristics tuning
 - system dependent space optimization
-- fileread async
+- fileread optimization
