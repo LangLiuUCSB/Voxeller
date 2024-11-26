@@ -50,9 +50,9 @@ public:
     Route super_search(const TripPlan &trip_plan,
                        const SearchMode &super_search_mode,
                        const SearchMode &sub_search_mode) const;
-    bool self_check(const SearchMode &search_mode) const;
-    bool self_super_check(const SearchMode &super_search_mode,
-                          const SearchMode &sub_search_mode) const;
+    bool verify(const SearchMode &search_mode) const;
+    bool super_verify(const SearchMode &super_search_mode,
+                      const SearchMode &sub_search_mode) const;
 
 private:
     void tarjan_dfs(Node *u, int visit_time[], int low_link[], bool is_on_stack[],
