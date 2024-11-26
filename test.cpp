@@ -14,7 +14,7 @@ int main()
     std::string world_name;
     // log << "enter world name: ";
     // std::cin >> world_name;
-    world_name = "sandwich";
+    world_name = "a";
     FilePath file_path = "worlds/" + world_name + ".vox";
     log << file_path << "\n\n";
 
@@ -32,36 +32,26 @@ int main()
     X.set_hi_res_end();
     log << "Initialization time: " << X.get_us() << " microseconds\n\n";
 
-    // const TripPlan trip_plan(Coordinate(3, 0, 1), Coordinate(7, 0, 1)); // junk
-    // const TripPlan trip_plan(Coordinate(4, 2, 1), Coordinate(63, 41, 37)); // fortress
-    // const TripPlan trip_plan(Coordinate(32, 64, 51), Coordinate(48, 14, 39)); // goop
-    // const TripPlan trip_plan(Coordinate(5, 0, 9), Coordinate(3, 0, 1)); // donkeykong
-    const TripPlan trip_plan(Coordinate(1, 1, 93), Coordinate(126, 94, 13)); // sandwich
-    Lattice::Route route;
-    X.set_hi_res_start();
-
-    try
-    {
-        route = L.search(trip_plan, Lattice::BIDIRECTIONAL_GBFS);
-    }
-    catch (const std::exception &e)
-    {
-        route = e.what();
-    }
-    X.set_hi_res_end();
-    log << "Path: " << route << ".\n";
-    route.clear();
-    log << "Search time: " << X.get_us() << " microseconds\n\n";
-
     X.set_hi_res_start();
     L.condense();
     X.set_hi_res_end();
     log << "Condensation time: " << X.get_us() << " microseconds\n\n";
 
+    for (char i = Lattice::NEGATIVE_GBFS; i < Lattice::JPS; ++i)
+    {
+        if (L.self_super_check(static_cast<Lattice::SearchMode>(i), Lattice::BIDIRECTIONAL_GBFS))
+            log << int(i) << "good\n";
+        else
+            log << int(i) << "bad\n";
+    }
+
+    const TripPlan trip_plan(Coordinate(7, 0, 9), Coordinate(5, 0, 5)); // a
+    Lattice::Route route;
+
     X.set_hi_res_start();
     try
     {
-        route = L.super_search(trip_plan, Lattice::REVERSE_A_STAR, Lattice::BIDIRECTIONAL_GBFS);
+        route = L.super_search(trip_plan, Lattice::REVERSE_GBFS, Lattice::BIDIRECTIONAL_GBFS);
     }
     catch (const std::exception &e)
     {
@@ -74,4 +64,3 @@ int main()
     log << "SUCCESS" << std::endl;
     return EXIT_SUCCESS;
 }
-// LLVM C++ Style Guide Ruler 100 -----------------------------------------------------------------|

@@ -9,6 +9,7 @@
 #include <fstream>
 
 #define LOG std::cout
+#define HELP std::cout << "help\n"
 
 using FilePath = std::string;
 class Lattice
@@ -26,6 +27,7 @@ public:
                                               const SearchMode &sub_search_mode) const;
 
 private:
+    FilePath origin_file_path;
     int x_size, y_size, z_size;
     size_t area_size, volume_size;
     std::unordered_map<Coordinate, Lattice::Node *, CoordinateHash> graph; // Node map
@@ -33,7 +35,7 @@ private:
 
 public:
     Lattice() noexcept = default;                           // Default constructor
-    Lattice(const FilePath &file_path);                     // Parameterized constructor
+    Lattice(const FilePath &file_path);                     // Parameterized constructor // todo handle bad parse
     Lattice(const Lattice &) noexcept = default;            // Copy constructor
     Lattice(Lattice &&) noexcept = default;                 // Move constructor
     Lattice &operator=(const Lattice &) noexcept = default; // Copy assignment
@@ -42,14 +44,15 @@ public:
 
     size_t node_count() const noexcept { return graph.size(); }
     size_t super_node_count() const noexcept { return congraph.size(); }
-
-    void parse(const FilePath &file_path); // todo handle bad parse
-    void condense() noexcept;
     Coordinate travel(const Coordinate &source, const Route &route) const;
+    void condense() noexcept;
     Route search(const TripPlan &trip_plan, const SearchMode &search_mode) const;
     Route super_search(const TripPlan &trip_plan,
                        const SearchMode &super_search_mode,
                        const SearchMode &sub_search_mode) const;
+    bool self_check(const SearchMode &search_mode) const;
+    bool self_super_check(const SearchMode &super_search_mode,
+                          const SearchMode &sub_search_mode) const;
 
 private:
     void tarjan_dfs(Node *u, int visit_time[], int low_link[], bool is_on_stack[],
