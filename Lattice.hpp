@@ -8,6 +8,8 @@
 #include <iostream>
 #include <fstream>
 
+#define LOG std::cout
+
 using FilePath = std::string;
 class Lattice
 {
