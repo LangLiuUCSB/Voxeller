@@ -45,14 +45,13 @@ int main()
     Lattice::SearchMode mode = static_cast<Lattice::SearchMode>(i);
     for (; i < Lattice::JPS; mode = static_cast<Lattice::SearchMode>(++i))
     {
-        if (L.self_super_check(mode, Lattice::BIDIRECTIONAL_GBFS))
+        if (L.super_verify(mode, Lattice::BIDIRECTIONAL_GBFS))
             log << int(i) << "good\n";
         else
             log << int(i) << "bad\n";
     }
     log << '\n';
 
-    /*
     const TripPlan trip_plan(Coordinate(7, 0, 9), Coordinate(4, 0, 7)); // a
     Lattice::Route route;
 
@@ -68,7 +67,6 @@ int main()
     X.set_hi_res_end();
     log << "Path: " << route << ".\n";
     log << "Search time: " << X.get_us() << " microseconds\n\n";
-    */
 
     log << "SUCCESS" << std::endl;
     return EXIT_SUCCESS;
