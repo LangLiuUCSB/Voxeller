@@ -17,6 +17,10 @@ struct Coordinate
   {
     return x == other.x && y == other.y && z == other.z;
   }
+  bool operator!=(const Coordinate &other) const noexcept
+  {
+    return x != other.x || y != other.y || z != other.z;
+  }
   Coordinate east() const noexcept { return Coordinate(x + 1, y, z); }
   Coordinate west() const noexcept { return Coordinate(x - 1, y, z); }
   Coordinate south() const noexcept { return Coordinate(x, y + 1, z); }

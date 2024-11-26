@@ -3,10 +3,13 @@
 
 #include "Coordinate.hpp"
 #include "TripPlan.hpp"
-#include "Errors.hpp"
+#include "LatticeErrors.hpp"
 
 #include <iostream>
 #include <fstream>
+
+#define LOG std::cout
+#define HELP std::cout << "help\n"
 
 using FilePath = std::string;
 class Lattice
@@ -21,9 +24,10 @@ public:
     using Route = std::string;
     using Algorithm = Route (Lattice::*)(Lattice::Node *source, Lattice::Node *target) const;
     using SuperAlgorithm = Route (Lattice::*)(Lattice::Node *source, Lattice::Node *target,
-                                              SearchMode sub_search_mode) const;
+                                              const SearchMode &sub_search_mode) const;
 
 private:
+    FilePath origin_file_path;
     int x_size, y_size, z_size;
     size_t area_size, volume_size;
     std::unordered_map<Coordinate, Lattice::Node *, CoordinateHash> graph; // Node map
@@ -31,7 +35,7 @@ private:
 
 public:
     Lattice() noexcept = default;                           // Default constructor
-    Lattice(const FilePath &file_path);                     // Parameterized constructor
+    Lattice(const FilePath &file_path);                     // Parameterized constructor // todo handle bad parse
     Lattice(const Lattice &) noexcept = default;            // Copy constructor
     Lattice(Lattice &&) noexcept = default;                 // Move constructor
     Lattice &operator=(const Lattice &) noexcept = default; // Copy assignment
@@ -40,19 +44,21 @@ public:
 
     size_t node_count() const noexcept { return graph.size(); }
     size_t super_node_count() const noexcept { return congraph.size(); }
-
+    Coordinate travel(const Coordinate &source, const Route &route) const;
     void condense() noexcept;
-    void forecast() noexcept;
-    Route search(TripPlan trip_plan, SearchMode search_mode) const;
-    Route super_search(TripPlan trip_plan,
-                       SearchMode super_search_mode,
-                       SearchMode sub_search_mode) const;
+    Route search(const TripPlan &trip_plan, const SearchMode &search_mode) const;
+    Route super_search(const TripPlan &trip_plan,
+                       const SearchMode &super_search_mode,
+                       const SearchMode &sub_search_mode) const;
+    bool self_check(const SearchMode &search_mode) const;
+    bool self_super_check(const SearchMode &super_search_mode,
+                          const SearchMode &sub_search_mode) const;
 
 private:
     void tarjan_dfs(Node *u, int visit_time[], int low_link[], bool is_on_stack[],
                     std::stack<Node *> &stack, int &current_time, id_t &id) noexcept;
-    Algorithm get_algorithm(SearchMode search_mode) const noexcept;
-    SuperAlgorithm get_super_algorithm(SearchMode search_mode) const noexcept;
+    Algorithm get_algorithm(const SearchMode &search_mode) const noexcept;
+    SuperAlgorithm get_super_algorithm(const SearchMode &search_mode) const noexcept;
 
     Route dfs(Node *source, Node *target) const;
     Route rdfs(Node *source, Node *target) const;
@@ -75,62 +81,53 @@ private:
     Route jps(Node *source, Node *target) const;
     Route rjps(Node *source, Node *target) const;
     Route bdjps(Node *source, Node *target) const;
-    Route ucs(Node *source, Node *target) const;
-    Route rucs(Node *source, Node *target) const;
-    Route bducs(Node *source, Node *target) const;
 
-    Route super_dfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rdfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bddfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rbfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bdbfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_gbfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rgbfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bdgbfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_astar(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rastar(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bdastar(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_ngbfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rngbfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bdngbfs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_nastar(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rnastar(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bdnastar(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_jps(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rjps(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bdjps(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_ucs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_rucs(Node *source, Node *target, SearchMode sub_search_mode) const;
-    Route super_bducs(Node *source, Node *target, SearchMode sub_search_mode) const;
+    Route super_dfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rdfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bddfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bdbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_gbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bdgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_astar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_ngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bdngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_nastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bdnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_jps(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rjps(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bdjps(Node *source, Node *target, const SearchMode &sub_search_mode) const;
 };
 
 enum Lattice::SearchMode : char
 {
-    DFS,
+    DFS, // Depth-First Search
     REVERSE_DFS,
     BIDIRECTIONAL_DFS,
-    BFS,
+    BFS, // Breadth-First Search
     REVERSE_BFS,
     BIDIRECTIONAL_BFS,
-    GBFS,
+    GBFS, // Greedy Best-First Search
     REVERSE_GBFS,
     BIDIRECTIONAL_GBFS,
-    A_STAR,
+    A_STAR, // A* Search
     REVERSE_A_STAR,
     BIDIRECTIONAL_A_STAR,
-    NEGATIVE_GBFS,
+    NEGATIVE_GBFS, // Max-Heap Greedy Best-First Search
     REVERSE_NEGATIVE_GBFS,
     BIDIRECTIONAL_NEGATIVE_GBFS,
-    NEGATIVE_A_STAR,
+    NEGATIVE_A_STAR, // Max-Heap A* Search
     REVERSE_NEGATIVE_A_STAR,
     BIDIRECTIONAL_NEGATIVE_A_STAR,
-    JPS,
+    JPS, // Jump Point Search
     REVERSE_JPS,
     BIDIRECTIONAL_JPS,
-    UCS,
-    REVERSE_UCS,
-    BIDIRECTIONAL_UCS
 };
 
 #endif

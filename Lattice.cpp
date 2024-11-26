@@ -7,13 +7,13 @@ struct Lattice::Node
     std::vector<Arc *> outgoings, incomings;
     SuperNode *super;
 
-    Node() noexcept = default;
-    Node(const id_t id, const Coordinate position) noexcept : id(id), position(position) {}
-    Node(const Node &) noexcept = default;
-    Node(Node &&) noexcept = default;
-    Node &operator=(const Node &) noexcept = default;
-    Node &operator=(Node &&) noexcept = default;
-    ~Node() noexcept = default;
+    Node() noexcept = default;                                                              // Default constructor
+    Node(const id_t id, const Coordinate position) noexcept : id(id), position(position) {} // Parameterized constructor
+    Node(const Node &) noexcept = default;                                                  // Copy constructor
+    Node(Node &&) noexcept = default;                                                       // Move constructor
+    Node &operator=(const Node &) noexcept = default;                                       // Copy assignment
+    Node &operator=(Node &&) noexcept = default;                                            // Move assignment
+    ~Node() noexcept = default;                                                             // Default destructor
 };
 
 struct Lattice::Arc
@@ -21,13 +21,13 @@ struct Lattice::Arc
     Node *next;
     Move move;
 
-    Arc() noexcept = default;
-    Arc(Node *next, const char move) noexcept : next(next), move(move) {}
-    Arc(const Arc &) noexcept = default;
-    Arc(Arc &&) noexcept = default;
-    Arc &operator=(const Arc &) noexcept = default;
-    Arc &operator=(Arc &&) noexcept = default;
-    ~Arc() noexcept = default;
+    Arc() noexcept = default;                                             // Default constructor
+    Arc(Node *next, const char move) noexcept : next(next), move(move) {} // Parameterized constructor
+    Arc(const Arc &) noexcept = default;                                  // Copy constructor
+    Arc(Arc &&) noexcept = default;                                       // Move constructor
+    Arc &operator=(const Arc &) noexcept = default;                       // Copy assignment
+    Arc &operator=(Arc &&) noexcept = default;                            // Move assignment
+    ~Arc() noexcept = default;                                            // Default destructor
 };
 
 struct Lattice::SuperNode
@@ -35,31 +35,31 @@ struct Lattice::SuperNode
     id_t id;
     std::vector<Node *> internals;
     std::vector<SuperArc *> outgoings, incomings;
-    std::vector<SuperNode *> reachables;
 
-    SuperNode() noexcept = default;
-    SuperNode(const id_t id) noexcept : id(id) {}
-    SuperNode(const SuperNode &) noexcept = default;
-    SuperNode(SuperNode &&) noexcept = default;
-    SuperNode &operator=(const SuperNode &) noexcept = default;
-    SuperNode &operator=(SuperNode &&) noexcept = default;
-    ~SuperNode() noexcept = default;
+    SuperNode() noexcept = default;                             // Default constructor
+    SuperNode(const id_t id) noexcept : id(id) {}               // Parameterized constructor
+    SuperNode(const SuperNode &) noexcept = default;            // Copy constructor
+    SuperNode(SuperNode &&) noexcept = default;                 // Move constructor
+    SuperNode &operator=(const SuperNode &) noexcept = default; // Copy assignment
+    SuperNode &operator=(SuperNode &&) noexcept = default;      // Move assignment
+    ~SuperNode() noexcept = default;                            // Default destructor
 };
 
 struct Lattice::SuperArc
 {
     SuperNode *next;
     Node *exit;
-    Arc *enter;
+    Arc *link;
 
-    SuperArc() noexcept = default;
-    SuperArc(SuperNode *next, Node *exit, Arc *enter) noexcept
-        : next(next), exit(exit), enter(enter) {}
-    SuperArc(const SuperArc &) noexcept = default;
-    SuperArc(SuperArc &&) noexcept = default;
-    SuperArc &operator=(const SuperArc &) noexcept = default;
-    SuperArc &operator=(SuperArc &&) noexcept = default;
-    ~SuperArc() noexcept = default;
+    SuperArc() noexcept = default;                                                                 // Default constructor
+    SuperArc(SuperNode *next, Node *exit, Arc *link) noexcept : next(next), exit(exit), link(link) // Parameterized constructor
+    {
+    }
+    SuperArc(const SuperArc &) noexcept = default;            // Copy constructor
+    SuperArc(SuperArc &&) noexcept = default;                 // Move constructor
+    SuperArc &operator=(const SuperArc &) noexcept = default; // Copy assignment
+    SuperArc &operator=(SuperArc &&) noexcept = default;      // Move assignment
+    ~SuperArc() noexcept = default;                           // Default destructor
 };
 
 #define VOID 7
@@ -74,10 +74,15 @@ struct Lattice::SuperArc
 
 Lattice::Lattice(const FilePath &file_path) // todo handle bad parse
 {
+    if (file_path.size() < 4 || file_path.compare(file_path.size() - 4, 4, ".vox") != 0)
+        throw std::runtime_error("File at " + file_path + " is not of type .vox");
+
     // open file
     std::ifstream data(file_path);
     if (data.fail())
         throw std::runtime_error("Could not open " + file_path);
+
+    origin_file_path = file_path;
 
     // initialize world bounds
     data >> x_size >> y_size >> z_size;
@@ -212,6 +217,52 @@ Lattice::~Lattice() noexcept
     }
 }
 
+Coordinate Lattice::travel(const Coordinate &source, const Route &route) const
+{
+    if (graph.find(source) == graph.end()) // check source validity
+        throw InvalidSource(source);
+    Node *current = graph.at(source);
+    for (size_t i = 0; i < route.size(); ++i)
+    {
+        Node *next = nullptr;
+        for (Arc *arc : current->outgoings)
+        {
+            if (arc->move == route[i])
+                next = arc->next;
+        }
+        if (next == nullptr)
+            throw InvalidRoute(route[i], i);
+        current = next;
+    }
+    return current->position;
+}
+
+void Lattice::condense() noexcept
+{
+    int *visit_time = new int[graph.size()]();
+    int *low_link = new int[graph.size()]();
+    bool *is_on_stack = new bool[graph.size()]();
+    std::stack<Node *> stack;
+    int current_time = 0;
+    id_t id = 0;
+    for (auto [position, node] : graph)
+        if (visit_time[node->id] == 0)
+            tarjan_dfs(node, visit_time, low_link, is_on_stack, stack, current_time, id);
+    delete[] visit_time;
+    delete[] low_link;
+    delete[] is_on_stack;
+    for (SuperNode *super_node : congraph)
+        for (Node *node : super_node->internals)
+        {
+            for (Arc *arc : node->outgoings)
+                if (arc->next->super != super_node)
+                    super_node->outgoings.push_back(new SuperArc(arc->next->super, node, arc));
+            for (Arc *arc : node->incomings)
+                if (arc->next->super != super_node)
+                    super_node->incomings.push_back(new SuperArc(arc->next->super, node, arc));
+        }
+}
+
 void Lattice::tarjan_dfs(Node *u, int visit_time[], int low_link[], bool is_on_stack[],
                          std::stack<Node *> &stack, int &current_time, id_t &id) noexcept
 {
@@ -245,35 +296,74 @@ void Lattice::tarjan_dfs(Node *u, int visit_time[], int low_link[], bool is_on_s
     }
 }
 
-void Lattice::condense() noexcept
+Lattice::Route Lattice::search(const TripPlan &trip_plan, const SearchMode &search_mode) const
 {
-    int *visit_time = new int[graph.size()]();
-    int *low_link = new int[graph.size()]();
-    bool *is_on_stack = new bool[graph.size()]();
-    std::stack<Node *> stack;
-    int current_time = 0;
-    id_t id = 0;
-    for (auto [position, node] : graph)
-        if (visit_time[node->id] == 0)
-            tarjan_dfs(node, visit_time, low_link, is_on_stack, stack, current_time, id);
-    delete[] visit_time;
-    delete[] low_link;
-    delete[] is_on_stack;
-    for (SuperNode *super_node : congraph)
-        for (Node *node : super_node->internals)
-        {
-            for (Arc *arc : node->outgoings)
-                if (arc->next->super != super_node)
-                    super_node->outgoings.push_back(new SuperArc(arc->next->super, node, arc));
-            for (Arc *arc : node->incomings)
-                if (arc->next->super != super_node)
-                    super_node->incomings.push_back(new SuperArc(arc->next->super, node, arc));
-        }
+    if (graph.find(trip_plan.source) == graph.end()) // check source validity
+        throw InvalidSource(trip_plan.source);
+    Node *source = graph.at(trip_plan.source);
+
+    if (graph.find(trip_plan.target) == graph.end()) // check target validity
+        throw InvalidTarget(trip_plan.target);
+    Node *target = graph.at(trip_plan.target);
+
+    Algorithm algorithm = get_algorithm(search_mode);
+    if (algorithm == nullptr)
+        throw InvalidSearchMode(search_mode);
+
+    try
+    {
+        return (this->*algorithm)(source, target);
+    }
+    catch (const std::exception &e)
+    {
+        throw;
+    }
 }
 
-void Lattice::forecast() noexcept {} // todo
+Lattice::Route Lattice::super_search(const TripPlan &trip_plan,
+                                     const SearchMode &super_search_mode,
+                                     const SearchMode &sub_search_mode) const
+{
+    if (graph.find(trip_plan.source) == graph.end()) // check source validity
+        throw InvalidSource(trip_plan.source);
+    Node *source = graph.at(trip_plan.source);
 
-Lattice::Algorithm Lattice::get_algorithm(SearchMode search_mode) const noexcept
+    if (graph.find(trip_plan.target) == graph.end()) // check target validity
+        throw InvalidTarget(trip_plan.target);
+    Node *target = graph.at(trip_plan.target);
+
+    SuperAlgorithm super_algorithm = get_super_algorithm(super_search_mode);
+    if (super_algorithm == nullptr)
+        throw InvalidSearchMode(super_search_mode);
+
+    if (source->super != target->super)
+    {
+        std::cout << "SUPER\n";
+        try
+        {
+            return (this->*super_algorithm)(source, target, sub_search_mode);
+        }
+        catch (const std::exception &e)
+        {
+            throw;
+        }
+    }
+
+    Algorithm algorithm = get_algorithm(sub_search_mode);
+    if (algorithm == nullptr)
+        throw InvalidSearchMode(sub_search_mode);
+
+    try
+    {
+        return (this->*algorithm)(source, target);
+    }
+    catch (const std::exception &e)
+    {
+        throw;
+    }
+}
+
+Lattice::Algorithm Lattice::get_algorithm(const SearchMode &search_mode) const noexcept
 {
     switch (search_mode)
     {
@@ -319,17 +409,11 @@ Lattice::Algorithm Lattice::get_algorithm(SearchMode search_mode) const noexcept
         return &Lattice::rjps;
     case BIDIRECTIONAL_JPS:
         return &Lattice::bdjps;
-    case UCS:
-        return &Lattice::ucs;
-    case REVERSE_UCS:
-        return &Lattice::rucs;
-    case BIDIRECTIONAL_UCS:
-        return &Lattice::bducs;
     }
     return nullptr;
 }
 
-Lattice::SuperAlgorithm Lattice::get_super_algorithm(SearchMode search_mode) const noexcept
+Lattice::SuperAlgorithm Lattice::get_super_algorithm(const SearchMode &search_mode) const noexcept
 {
     switch (search_mode)
     {
@@ -375,82 +459,8 @@ Lattice::SuperAlgorithm Lattice::get_super_algorithm(SearchMode search_mode) con
         return &Lattice::super_rjps;
     case BIDIRECTIONAL_JPS:
         return &Lattice::super_bdjps;
-    case UCS:
-        return &Lattice::super_ucs;
-    case REVERSE_UCS:
-        return &Lattice::super_rucs;
-    case BIDIRECTIONAL_UCS:
-        return &Lattice::super_bducs;
-    default:
-        std::cout << "unknown search mode!\n";
     }
     return nullptr;
-}
-
-Lattice::Route Lattice::search(TripPlan trip_plan, SearchMode search_mode) const
-{
-    if (graph.find(trip_plan.source) == graph.end()) // check source validity
-        throw InvalidSource(trip_plan.source);
-    Node *source = graph.at(trip_plan.source);
-
-    if (graph.find(trip_plan.target) == graph.end()) // check target validity
-        throw InvalidTarget(trip_plan.target);
-    Node *target = graph.at(trip_plan.target);
-
-    Algorithm algorithm = get_algorithm(search_mode);
-    if (algorithm == nullptr)
-        throw InvalidSearchMode(search_mode);
-
-    try
-    {
-        return (this->*algorithm)(source, target);
-    }
-    catch (const std::exception &e)
-    {
-        throw;
-    }
-}
-
-Lattice::Route Lattice::super_search(TripPlan trip_plan,
-                                     SearchMode super_search_mode,
-                                     SearchMode sub_search_mode) const
-{
-    if (graph.find(trip_plan.source) == graph.end()) // check source validity
-        throw InvalidSource(trip_plan.source);
-    Node *source = graph.at(trip_plan.source);
-
-    if (graph.find(trip_plan.target) == graph.end()) // check target validity
-        throw InvalidTarget(trip_plan.target);
-    Node *target = graph.at(trip_plan.target);
-
-    SuperAlgorithm super_algorithm = get_super_algorithm(super_search_mode);
-    if (super_algorithm == nullptr)
-        throw InvalidSearchMode(super_search_mode);
-
-    if (source->super != target->super)
-    {
-        try
-        {
-            return (this->*super_algorithm)(source, target, sub_search_mode);
-        }
-        catch (const std::exception &e)
-        {
-            throw;
-        }
-    }
-
-    Algorithm algorithm = get_algorithm(sub_search_mode);
-    if (algorithm == nullptr)
-        throw InvalidSearchMode(sub_search_mode);
-
-    try
-    {
-        return (this->*algorithm)(source, target);
-    }
-    catch (const std::exception &e)
-    {
-        throw;
-    }
 }
 
 Lattice::Route Lattice::dfs(Node *source, Node *target) const
@@ -463,7 +473,7 @@ Lattice::Route Lattice::dfs(Node *source, Node *target) const
     Move *move = new Move[graph.size()]();
     std::stack<Node *> open_set;
 
-    // track initial neighbors
+    // track initial adjacencies
     for (Arc *arc : source->outgoings)
     {
         last[arc->next->id] = source;
@@ -474,7 +484,7 @@ Lattice::Route Lattice::dfs(Node *source, Node *target) const
     // search
     while (!open_set.empty())
     {
-        Node *current = open_set.top(); // get next node
+        Node *current = open_set.top(); // get entry node
         open_set.pop();
 
         if (current == target) // goal check
@@ -524,7 +534,7 @@ Lattice::Route Lattice::rdfs(Node *source, Node *target) const
     // search
     while (!open_set.empty())
     {
-        Node *current = open_set.top(); // get next node
+        Node *current = open_set.top(); // get entry node
         open_set.pop();
 
         if (current == source) // goal check
@@ -558,8 +568,8 @@ Lattice::Route Lattice::bddfs(Node *source, Node *target) const
         return "";
 
     // search meta data
-    Node *current_F, *current_B;
-    Node **last_F = new Node *[graph.size()](), **last_B = new Node *[graph.size()]();
+    Node *current_F = source, *current_B = target,
+         **last_F = new Node *[graph.size()](), **last_B = new Node *[graph.size()]();
     Move *move_F = new Move[graph.size()](), *move_B = new Move[graph.size()]();
     std::stack<Node *> open_set_F, open_set_B;
 
@@ -582,17 +592,18 @@ Lattice::Route Lattice::bddfs(Node *source, Node *target) const
     {
         if (open_set_F.empty())
             break;
-        current_F = open_set_F.top(); // get next node (forwards)
+        current_F = open_set_F.top(); // get entry node (forwards)
         open_set_F.pop();
 
         if (move_B[current_F->id]) // goal check (forwards)
         {
             Route route;
-            for (Node *current = current_F; current != source; current = last_F[current->id])
-                route.push_back(move_F[current->id]);
+            current_B = current_F;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
             std::reverse(route.begin(), route.end());
-            for (Node *current = current_F; current != target; current = last_B[current->id])
-                route.push_back(move_B[current->id]);
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
             delete[] last_F, delete[] move_F;
             delete[] last_B, delete[] move_B;
             return route;
@@ -600,16 +611,18 @@ Lattice::Route Lattice::bddfs(Node *source, Node *target) const
 
         if (open_set_B.empty())
             break;
-        current_B = open_set_B.top(); // get next node (backwards)
+        current_B = open_set_B.top(); // get entry node (backwards)
+        open_set_B.pop();
 
         if (move_F[current_B->id]) // goal check (backwards)
         {
             Route route;
-            for (Node *current = current_B; current != source; current = last_B[current->id])
-                route.push_back(move_B[current->id]);
+            current_F = current_B;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
             std::reverse(route.begin(), route.end());
-            for (Node *current = current_B; current != target; current = last_F[current->id])
-                route.push_back(move_F[current->id]);
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
             delete[] last_F, delete[] move_F;
             delete[] last_B, delete[] move_B;
             return route;
@@ -640,14 +653,195 @@ Lattice::Route Lattice::bddfs(Node *source, Node *target) const
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::bfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+Lattice::Route Lattice::bfs(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
 
-Lattice::Route Lattice::rbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+    // search meta data
+    Node **last = new Node *[graph.size()]();
+    Move *move = new Move[graph.size()]();
+    std::queue<Node *> open_set;
 
-Lattice::Route Lattice::bdbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+    // track initial adjacencies
+    for (Arc *arc : source->outgoings)
+    {
+        last[arc->next->id] = source;
+        move[arc->next->id] = arc->move;
+        open_set.push(arc->next);
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        Node *current = open_set.front(); // get entry node
+        open_set.pop();
+
+        if (current == target) // goal check
+        {
+            Route route;
+            for (; current != source; current = last[current->id])
+                route.push_back(move[current->id]);
+            std::reverse(route.begin(), route.end());
+            delete[] last, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current->outgoings)
+        {
+            if (move[arc->next->id] != 0)
+                continue;
+            last[arc->next->id] = current;
+            move[arc->next->id] = arc->move;
+            open_set.push(arc->next);
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::rbfs(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node **last = new Node *[graph.size()]();
+    Move *move = new Move[graph.size()]();
+    std::queue<Node *> open_set;
+
+    // track initial adjacencies
+    for (Arc *arc : target->incomings)
+    {
+        last[arc->next->id] = target;
+        move[arc->next->id] = arc->move;
+        open_set.push(arc->next);
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        Node *current = open_set.front(); // get entry node
+        open_set.pop();
+
+        if (current == source) // goal check
+        {
+            Route route;
+            for (; current != target; current = last[current->id])
+                route.push_back(move[current->id]);
+            delete[] last, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current->incomings)
+        {
+            if (move[arc->next->id] != 0)
+                continue;
+            last[arc->next->id] = current;
+            move[arc->next->id] = arc->move;
+            open_set.push(arc->next);
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::bdbfs(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node *current_F = source, *current_B = target,
+         **last_F = new Node *[graph.size()](), **last_B = new Node *[graph.size()]();
+    Move *move_F = new Move[graph.size()](), *move_B = new Move[graph.size()]();
+    std::queue<Node *> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (Arc *arc : source->outgoings) // (forwards)
+    {
+        last_F[arc->next->id] = source;
+        move_F[arc->next->id] = arc->move;
+        open_set_F.push(arc->next);
+    }
+    for (Arc *arc : target->incomings) // (backwards)
+    {
+        last_B[arc->next->id] = target;
+        move_B[arc->next->id] = arc->move;
+        open_set_B.push(arc->next);
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+        current_F = open_set_F.front(); // get entry node (forwards)
+        open_set_F.pop();
+
+        if (move_B[current_F->id]) // goal check (forwards)
+        {
+            Route route;
+            current_B = current_F;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
+            std::reverse(route.begin(), route.end());
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
+            delete[] last_F, delete[] move_F;
+            delete[] last_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        current_B = open_set_B.front(); // get entry node (backwards)
+        open_set_B.pop();
+
+        if (move_F[current_B->id]) // goal check (backwards)
+        {
+            Route route;
+            current_F = current_B;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
+            std::reverse(route.begin(), route.end());
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
+            delete[] last_F, delete[] move_F;
+            delete[] last_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current_F->outgoings) // (forwards)
+        {
+            if (move_F[arc->next->id] != 0)
+                continue;
+            last_F[arc->next->id] = current_F;
+            move_F[arc->next->id] = arc->move;
+            open_set_F.push(arc->next);
+        }
+        for (Arc *arc : current_B->incomings) // (backwards)
+        {
+            if (move_B[arc->next->id] != 0)
+                continue;
+            last_B[arc->next->id] = current_B;
+            move_B[arc->next->id] = arc->move;
+            open_set_B.push(arc->next);
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] move_F;
+    delete[] last_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
 
 Lattice::Route Lattice::gbfs(Node *source, Node *target) const
 {
@@ -666,7 +860,7 @@ Lattice::Route Lattice::gbfs(Node *source, Node *target) const
     };
     std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set;
 
-    // track initial neighbors
+    // track initial adjacencies
     for (Arc *arc : source->outgoings)
     {
         last[arc->next->id] = source;
@@ -677,7 +871,7 @@ Lattice::Route Lattice::gbfs(Node *source, Node *target) const
     // search
     while (!open_set.empty())
     {
-        auto [current, key] = open_set.top(); // get next node
+        auto [current, key] = open_set.top(); // get entry node
         open_set.pop();
 
         if (current == target) // goal check
@@ -734,7 +928,7 @@ Lattice::Route Lattice::rgbfs(Node *source, Node *target) const
     // search
     while (!open_set.empty())
     {
-        auto [current, key] = open_set.top(); // get next node
+        auto [current, key] = open_set.top(); // get entry node
         open_set.pop();
 
         if (current == source) // goal check
@@ -768,14 +962,14 @@ Lattice::Route Lattice::bdgbfs(Node *source, Node *target) const
         return "";
 
     // search meta data
-    Node *current_F = source, *current_B = target;
-    size_t key_F, key_B;
-    Node **last_F = new Node *[graph.size()](), **last_B = new Node *[graph.size()]();
+    Node *current_F = source, *current_B = target,
+         **last_F = new Node *[graph.size()](), **last_B = new Node *[graph.size()]();
     Move *move_F = new Move[graph.size()](), *move_B = new Move[graph.size()]();
     auto heuristic_F = [&current_B](Node *n)
     { return manhattan_distance(current_B->position, n->position); };
     auto heuristic_B = [&current_F](Node *n)
     { return manhattan_distance(current_F->position, n->position); };
+    size_t key_F, key_B;
     using Pair = std::pair<Node *, size_t>;
     struct PairMinCmp
     {
@@ -802,35 +996,37 @@ Lattice::Route Lattice::bdgbfs(Node *source, Node *target) const
     {
         if (open_set_F.empty())
             break;
-        std::tie(current_F, key_F) = open_set_F.top(); // get next node (forwards)
+        std::tie(current_F, key_F) = open_set_F.top(); // get entry node (forwards)
         open_set_F.pop();
 
         if (move_B[current_F->id]) // goal check (forwards)
         {
             Route route;
-            for (Node *current = current_F; current != source; current = last_F[current->id])
-                route.push_back(move_F[current->id]);
+            current_B = current_F;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
             std::reverse(route.begin(), route.end());
-            for (Node *current = current_F; current != target; current = last_B[current->id])
-                route.push_back(move_B[current->id]);
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
             delete[] last_F, delete[] move_F;
             delete[] last_B, delete[] move_B;
-
             return route;
         }
 
         if (open_set_B.empty())
             break;
-        std::tie(current_B, key_B) = open_set_B.top(); // get next node (backwards)
+        std::tie(current_B, key_B) = open_set_B.top(); // get entry node (backwards)
+        open_set_B.pop();
 
         if (move_F[current_B->id]) // goal check (backwards)
         {
             Route route;
-            for (Node *current = current_B; current != source; current = last_B[current->id])
-                route.push_back(move_B[current->id]);
+            current_F = current_B;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
             std::reverse(route.begin(), route.end());
-            for (Node *current = current_B; current != target; current = last_F[current->id])
-                route.push_back(move_F[current->id]);
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
             delete[] last_F, delete[] move_F;
             delete[] last_B, delete[] move_B;
             return route;
@@ -861,32 +1057,655 @@ Lattice::Route Lattice::bdgbfs(Node *source, Node *target) const
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::astar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+Lattice::Route Lattice::astar(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
 
-Lattice::Route Lattice::rastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+    // search meta data
+    Node **last = new Node *[graph.size()]();
+    Move *move = new Move[graph.size()]();
+    auto heuristic = [source, target](Node *n)
+    { return manhattan_distance(source->position, n->position) +
+             manhattan_distance(target->position, n->position); };
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMinCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second > b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set;
 
-Lattice::Route Lattice::bdastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+    // track initial adjacencies
+    for (Arc *arc : source->outgoings)
+    {
+        last[arc->next->id] = source;
+        move[arc->next->id] = arc->move;
+        open_set.emplace(arc->next, heuristic(arc->next));
+    }
 
-Lattice::Route Lattice::ngbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+    // search
+    while (!open_set.empty())
+    {
+        auto [current, key] = open_set.top(); // get entry node
+        open_set.pop();
 
-Lattice::Route Lattice::rngbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+        if (current == target) // goal check
+        {
+            Route route;
+            for (; current != source; current = last[current->id])
+                route.push_back(move[current->id]);
+            std::reverse(route.begin(), route.end());
+            delete[] last, delete[] move;
+            return route;
+        }
 
-Lattice::Route Lattice::bdngbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+        // track current adjacencies
+        for (Arc *arc : current->outgoings)
+        {
+            if (move[arc->next->id] != 0)
+                continue;
+            last[arc->next->id] = current;
+            move[arc->next->id] = arc->move;
+            open_set.emplace(arc->next, heuristic(arc->next));
+        }
+    }
 
-Lattice::Route Lattice::nastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+    // when no path is found
+    delete[] last, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
 
-Lattice::Route Lattice::rnastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+Lattice::Route Lattice::rastar(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
 
-Lattice::Route Lattice::bdnastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
+    // search meta data
+    Node **last = new Node *[graph.size()]();
+    Move *move = new Move[graph.size()]();
+    auto heuristic = [target, source](Node *n)
+    { return manhattan_distance(target->position, n->position) +
+             manhattan_distance(source->position, n->position); };
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMinCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second > b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set;
+
+    // track initial adjacencies
+    for (Arc *arc : target->incomings)
+    {
+        last[arc->next->id] = target;
+        move[arc->next->id] = arc->move;
+        open_set.emplace(arc->next, heuristic(arc->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (current == source) // goal check
+        {
+            Route route;
+            for (; current != target; current = last[current->id])
+                route.push_back(move[current->id]);
+            delete[] last, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current->incomings)
+        {
+            if (move[arc->next->id] != 0)
+                continue;
+            last[arc->next->id] = current;
+            move[arc->next->id] = arc->move;
+            open_set.emplace(arc->next, heuristic(arc->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::bdastar(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node *current_F = source, *current_B = target,
+         **last_F = new Node *[graph.size()](), **last_B = new Node *[graph.size()]();
+    Move *move_F = new Move[graph.size()](), *move_B = new Move[graph.size()]();
+    auto heuristic_F = [source, &current_B](Node *n)
+    { return manhattan_distance(source->position, n->position) +
+             manhattan_distance(current_B->position, n->position); };
+    auto heuristic_B = [target, &current_F](Node *n)
+    { return manhattan_distance(target->position, n->position) +
+             manhattan_distance(current_F->position, n->position); };
+    size_t key_F, key_B;
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMinCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second > b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (Arc *arc : source->outgoings) // (forwards)
+    {
+        last_F[arc->next->id] = source;
+        move_F[arc->next->id] = arc->move;
+        open_set_F.emplace(arc->next, heuristic_F(arc->next));
+    }
+    for (Arc *arc : target->incomings) // (backwards)
+    {
+        last_B[arc->next->id] = target;
+        move_B[arc->next->id] = arc->move;
+        open_set_B.emplace(arc->next, heuristic_B(arc->next));
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+        std::tie(current_F, key_F) = open_set_F.top(); // get entry node (forwards)
+        open_set_F.pop();
+
+        if (move_B[current_F->id]) // goal check (forwards)
+        {
+            Route route;
+            current_B = current_F;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
+            std::reverse(route.begin(), route.end());
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
+            delete[] last_F, delete[] move_F;
+            delete[] last_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        std::tie(current_B, key_B) = open_set_B.top(); // get entry node (backwards)
+        open_set_B.pop();
+
+        if (move_F[current_B->id]) // goal check (backwards)
+        {
+            Route route;
+            current_F = current_B;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
+            std::reverse(route.begin(), route.end());
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
+            delete[] last_F, delete[] move_F;
+            delete[] last_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current_F->outgoings) // (forwards)
+        {
+            if (move_F[arc->next->id] != 0)
+                continue;
+            last_F[arc->next->id] = current_F;
+            move_F[arc->next->id] = arc->move;
+            open_set_F.emplace(arc->next, heuristic_F(arc->next));
+        }
+        for (Arc *arc : current_B->incomings) // (backwards)
+        {
+            if (move_B[arc->next->id] != 0)
+                continue;
+            last_B[arc->next->id] = current_B;
+            move_B[arc->next->id] = arc->move;
+            open_set_B.emplace(arc->next, heuristic_B(arc->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] move_F;
+    delete[] last_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::ngbfs(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node **last = new Node *[graph.size()]();
+    Move *move = new Move[graph.size()]();
+    auto heuristic = [target](Node *n)
+    { return manhattan_distance(target->position, n->position); };
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set;
+
+    // track initial adjacencies
+    for (Arc *arc : source->outgoings)
+    {
+        last[arc->next->id] = source;
+        move[arc->next->id] = arc->move;
+        open_set.emplace(arc->next, heuristic(arc->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (current == target) // goal check
+        {
+            Route route;
+            for (; current != source; current = last[current->id])
+                route.push_back(move[current->id]);
+            std::reverse(route.begin(), route.end());
+            delete[] last, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current->outgoings)
+        {
+            if (move[arc->next->id] != 0)
+                continue;
+            last[arc->next->id] = current;
+            move[arc->next->id] = arc->move;
+            open_set.emplace(arc->next, heuristic(arc->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::rngbfs(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node **last = new Node *[graph.size()]();
+    Move *move = new Move[graph.size()]();
+    auto heuristic = [source](Node *n)
+    { return manhattan_distance(source->position, n->position); };
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set;
+
+    // track initial adjacencies
+    for (Arc *arc : target->incomings)
+    {
+        last[arc->next->id] = target;
+        move[arc->next->id] = arc->move;
+        open_set.emplace(arc->next, heuristic(arc->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (current == source) // goal check
+        {
+            Route route;
+            for (; current != target; current = last[current->id])
+                route.push_back(move[current->id]);
+            delete[] last, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current->incomings)
+        {
+            if (move[arc->next->id] != 0)
+                continue;
+            last[arc->next->id] = current;
+            move[arc->next->id] = arc->move;
+            open_set.emplace(arc->next, heuristic(arc->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::bdngbfs(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node *current_F = source, *current_B = target,
+         **last_F = new Node *[graph.size()](), **last_B = new Node *[graph.size()]();
+    Move *move_F = new Move[graph.size()](), *move_B = new Move[graph.size()]();
+    auto heuristic_F = [&current_B](Node *n)
+    { return manhattan_distance(current_B->position, n->position); };
+    auto heuristic_B = [&current_F](Node *n)
+    { return manhattan_distance(current_F->position, n->position); };
+    size_t key_F, key_B;
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (Arc *arc : source->outgoings) // (forwards)
+    {
+        last_F[arc->next->id] = source;
+        move_F[arc->next->id] = arc->move;
+        open_set_F.emplace(arc->next, heuristic_F(arc->next));
+    }
+    for (Arc *arc : target->incomings) // (backwards)
+    {
+        last_B[arc->next->id] = target;
+        move_B[arc->next->id] = arc->move;
+        open_set_B.emplace(arc->next, heuristic_B(arc->next));
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+        std::tie(current_F, key_F) = open_set_F.top(); // get entry node (forwards)
+        open_set_F.pop();
+
+        if (move_B[current_F->id]) // goal check (forwards)
+        {
+            Route route;
+            current_B = current_F;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
+            std::reverse(route.begin(), route.end());
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
+            delete[] last_F, delete[] move_F;
+            delete[] last_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        std::tie(current_B, key_B) = open_set_B.top(); // get entry node (backwards)
+        open_set_B.pop();
+
+        if (move_F[current_B->id]) // goal check (backwards)
+        {
+            Route route;
+            current_F = current_B;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
+            std::reverse(route.begin(), route.end());
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
+            delete[] last_F, delete[] move_F;
+            delete[] last_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current_F->outgoings) // (forwards)
+        {
+            if (move_F[arc->next->id] != 0)
+                continue;
+            last_F[arc->next->id] = current_F;
+            move_F[arc->next->id] = arc->move;
+            open_set_F.emplace(arc->next, heuristic_F(arc->next));
+        }
+        for (Arc *arc : current_B->incomings) // (backwards)
+        {
+            if (move_B[arc->next->id] != 0)
+                continue;
+            last_B[arc->next->id] = current_B;
+            move_B[arc->next->id] = arc->move;
+            open_set_B.emplace(arc->next, heuristic_B(arc->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] move_F;
+    delete[] last_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::nastar(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node **last = new Node *[graph.size()]();
+    Move *move = new Move[graph.size()]();
+    auto heuristic = [source, target](Node *n)
+    { return manhattan_distance(source->position, n->position) +
+             manhattan_distance(target->position, n->position); };
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set;
+
+    // track initial adjacencies
+    for (Arc *arc : source->outgoings)
+    {
+        last[arc->next->id] = source;
+        move[arc->next->id] = arc->move;
+        open_set.emplace(arc->next, heuristic(arc->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (current == target) // goal check
+        {
+            Route route;
+            for (; current != source; current = last[current->id])
+                route.push_back(move[current->id]);
+            std::reverse(route.begin(), route.end());
+            delete[] last, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current->outgoings)
+        {
+            if (move[arc->next->id] != 0)
+                continue;
+            last[arc->next->id] = current;
+            move[arc->next->id] = arc->move;
+            open_set.emplace(arc->next, heuristic(arc->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::rnastar(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node **last = new Node *[graph.size()]();
+    Move *move = new Move[graph.size()]();
+    auto heuristic = [target, source](Node *n)
+    { return manhattan_distance(target->position, n->position) +
+             manhattan_distance(source->position, n->position); };
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set;
+
+    // track initial adjacencies
+    for (Arc *arc : target->incomings)
+    {
+        last[arc->next->id] = target;
+        move[arc->next->id] = arc->move;
+        open_set.emplace(arc->next, heuristic(arc->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (current == source) // goal check
+        {
+            Route route;
+            for (; current != target; current = last[current->id])
+                route.push_back(move[current->id]);
+            delete[] last, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current->incomings)
+        {
+            if (move[arc->next->id] != 0)
+                continue;
+            last[arc->next->id] = current;
+            move[arc->next->id] = arc->move;
+            open_set.emplace(arc->next, heuristic(arc->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::bdnastar(Node *source, Node *target) const
+{
+    if (source == target) // trivial case
+        return "";
+
+    // search meta data
+    Node *current_F = source, *current_B = target,
+         **last_F = new Node *[graph.size()](), **last_B = new Node *[graph.size()]();
+    Move *move_F = new Move[graph.size()](), *move_B = new Move[graph.size()]();
+    auto heuristic_F = [source, &current_B](Node *n)
+    { return manhattan_distance(source->position, n->position) +
+             manhattan_distance(current_B->position, n->position); };
+    auto heuristic_B = [target, &current_F](Node *n)
+    { return manhattan_distance(target->position, n->position) +
+             manhattan_distance(current_F->position, n->position); };
+    size_t key_F, key_B;
+    using Pair = std::pair<Node *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (Arc *arc : source->outgoings) // (forwards)
+    {
+        last_F[arc->next->id] = source;
+        move_F[arc->next->id] = arc->move;
+        open_set_F.emplace(arc->next, heuristic_F(arc->next));
+    }
+    for (Arc *arc : target->incomings) // (backwards)
+    {
+        last_B[arc->next->id] = target;
+        move_B[arc->next->id] = arc->move;
+        open_set_B.emplace(arc->next, heuristic_B(arc->next));
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+        std::tie(current_F, key_F) = open_set_F.top(); // get entry node (forwards)
+        open_set_F.pop();
+
+        if (move_B[current_F->id]) // goal check (forwards)
+        {
+            Route route;
+            current_B = current_F;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
+            std::reverse(route.begin(), route.end());
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
+            delete[] last_F, delete[] move_F;
+            delete[] last_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        std::tie(current_B, key_B) = open_set_B.top(); // get entry node (backwards)
+        open_set_B.pop();
+
+        if (move_F[current_B->id]) // goal check (backwards)
+        {
+            Route route;
+            current_F = current_B;
+            for (; current_F != source; current_F = last_F[current_F->id])
+                route.push_back(move_F[current_F->id]);
+            std::reverse(route.begin(), route.end());
+            for (; current_B != target; current_B = last_B[current_B->id])
+                route.push_back(move_B[current_B->id]);
+            delete[] last_F, delete[] move_F;
+            delete[] last_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        for (Arc *arc : current_F->outgoings) // (forwards)
+        {
+            if (move_F[arc->next->id] != 0)
+                continue;
+            last_F[arc->next->id] = current_F;
+            move_F[arc->next->id] = arc->move;
+            open_set_F.emplace(arc->next, heuristic_F(arc->next));
+        }
+        for (Arc *arc : current_B->incomings) // (backwards)
+        {
+            if (move_B[arc->next->id] != 0)
+                continue;
+            last_B[arc->next->id] = current_B;
+            move_B[arc->next->id] = arc->move;
+            open_set_B.emplace(arc->next, heuristic_B(arc->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] move_F;
+    delete[] last_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
 
 Lattice::Route Lattice::jps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
     const { return "Unfinished Algorithm"; }
@@ -897,70 +1716,30 @@ Lattice::Route Lattice::rjps([[maybe_unused]] Node *source, [[maybe_unused]] Nod
 Lattice::Route Lattice::bdjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
     const { return "Unfinished Algorithm"; }
 
-Lattice::Route Lattice::ucs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::rucs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::bducs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_dfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                  [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_rdfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                   [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_bddfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                    [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_bfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                  [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_rbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                   [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_bdbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                    [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_gbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_dfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
-    SuperNode *super_source = source->super, *super_target = target->super;
-    SuperNode **last = new SuperNode *[congraph.size()]();
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
     Node **exit = new Node *[congraph.size()](),
-         **next = new Node *[congraph.size()]();
+         **entry = new Node *[congraph.size()]();
     Move *move = new Move[congraph.size()]();
-    auto heuristic = [target](Node *n)
-    { return manhattan_distance(target->position, n->position); };
-    using Pair = std::pair<SuperNode *, size_t>;
-    struct PairMinCmp
-    {
-        bool operator()(const Pair &a, const Pair &b) { return a.second > b.second; }
-    };
-    std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set;
+    std::stack<SuperNode *> open_set;
 
-    // track initial neighbors
+    // track initial adjacencies
     for (SuperArc *super_arc : super_source->outgoings)
     {
         last[super_arc->next->id] = super_source;
         exit[super_arc->next->id] = super_arc->exit;
-        next[super_arc->next->id] = super_arc->enter->next;
-        move[super_arc->next->id] = super_arc->enter->move;
-        open_set.emplace(super_arc->next, heuristic(super_arc->enter->next));
+        entry[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.push(super_arc->next);
     }
 
     // search
     while (!open_set.empty())
     {
-        auto [super_current, key] = open_set.top(); // get next node
+        SuperNode *super_current = open_set.top(); // get entry node
         open_set.pop();
 
         if (super_current == super_target) // goal check
@@ -968,16 +1747,16 @@ Lattice::Route Lattice::super_gbfs(Node *source, Node *target, SearchMode sub_se
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
                 throw InvalidSearchMode(sub_search_mode);
-            Route route = (this->*algorithm)(next[super_current->id], target);
-            next[super_source->id] = source;
+            entry[super_source->id] = source;
+            Route route = (this->*algorithm)(entry[super_current->id], target);
             do
             {
                 route.insert(0, 1, move[super_current->id]);
                 Node *temp_exit = exit[super_current->id];
                 super_current = last[super_current->id];
-                route.insert(0, (this->*algorithm)(next[super_current->id], temp_exit));
+                route.insert(0, (this->*algorithm)(entry[super_current->id], temp_exit));
             } while (super_current != super_source);
-            delete[] last, delete[] exit, delete[] next, delete[] move;
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
             return route;
         }
 
@@ -988,24 +1767,539 @@ Lattice::Route Lattice::super_gbfs(Node *source, Node *target, SearchMode sub_se
                 continue;
             last[super_arc->next->id] = super_current;
             exit[super_arc->next->id] = super_arc->exit;
-            next[super_arc->next->id] = super_arc->enter->next;
-            move[super_arc->next->id] = super_arc->enter->move;
-            open_set.emplace(super_arc->next, heuristic(super_arc->enter->next));
+            entry[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.push(super_arc->next);
         }
     }
 
     // when no path is found
-    delete[] last, delete[] exit, delete[] next, delete[] move;
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_rgbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_rdfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
-    SuperNode *super_source = source->super, *super_target = target->super;
-    SuperNode **last = new SuperNode *[congraph.size()]();
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
     Node **exit = new Node *[congraph.size()](),
-         **next = new Node *[congraph.size()]();
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    std::stack<SuperNode *> open_set;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_target->incomings)
+    {
+        last[super_arc->next->id] = super_target;
+        entry[super_arc->next->id] = super_arc->exit;
+        exit[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.push(super_arc->next);
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        SuperNode *super_current = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_source) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            exit[super_target->id] = target;
+            Route route = (this->*algorithm)(source, exit[super_current->id]);
+            do
+            {
+                route += move[super_current->id];
+                Node *temp_entry = entry[super_current->id];
+                super_current = last[super_current->id];
+                route += (this->*algorithm)(temp_entry, exit[super_current->id]);
+            } while (super_current != super_target);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->incomings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            entry[super_arc->next->id] = super_arc->exit;
+            exit[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.push(super_arc->next);
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_current_F = super_source,
+              *super_target = target->super, *super_current_B = super_target,
+              **last_F = new SuperNode *[congraph.size()](),
+              **last_B = new SuperNode *[congraph.size()]();
+    Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
+         **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()]();
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
+    Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
+    std::stack<SuperNode *> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings) // (forwards)
+    {
+        last_F[super_arc->next->id] = super_source;
+        exit_F[super_arc->next->id] = super_arc->exit;
+        entry_F[super_arc->next->id] = super_arc->link->next;
+        move_F[super_arc->next->id] = super_arc->link->move;
+        open_set_F.push(super_arc->next);
+    }
+    for (SuperArc *super_arc : super_target->incomings) // (backwards)
+    {
+        last_B[super_arc->next->id] = super_target;
+        entry_B[super_arc->next->id] = super_arc->exit;
+        exit_B[super_arc->next->id] = super_arc->link->next;
+        move_B[super_arc->next->id] = super_arc->link->move;
+        open_set_B.push(super_arc->next);
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+
+        super_current_F = open_set_F.top(); // get entry super node (forwards)
+        open_set_F.pop();
+
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+
+            super_current_B = super_current_F;
+            Route route = (this->*algorithm)(entry_F[super_current_F->id], exit_B[super_current_F->id]);
+            do
+            {
+                route.insert(0, 1, move_F[super_current_F->id]);
+                Node *temp_exit = exit_F[super_current_F->id];
+                super_current_F = last_F[super_current_F->id];
+                route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+            } while (super_current_F != super_source);
+            if (super_current_B != super_target)
+                do
+                {
+                    route += move_B[super_current_B->id];
+                    Node *temp_entry = entry_B[super_current_B->id];
+                    super_current_B = last_B[super_current_B->id];
+                    route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+                } while (super_current_B != super_target);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        super_current_B = open_set_B.top(); // get entry super node (backwards)
+        open_set_B.pop();
+
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+
+            super_current_F = super_current_B;
+            Route route = (this->*algorithm)(entry_F[super_current_B->id], exit_B[super_current_B->id]);
+            do
+            {
+                route += move_B[super_current_B->id];
+                Node *temp_entry = entry_B[super_current_B->id];
+                super_current_B = last_B[super_current_B->id];
+                route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+            } while (super_current_B != super_target);
+            if (super_current_B != super_source)
+                do
+                {
+                    route.insert(0, 1, move_F[super_current_F->id]);
+                    Node *temp_exit = exit_F[super_current_F->id];
+                    super_current_F = last_F[super_current_F->id];
+                    route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+                } while (super_current_F != super_source);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current_F->outgoings) // (forwards)
+        {
+            if (move_F[super_arc->next->id] != 0)
+                continue;
+            last_F[super_arc->next->id] = super_current_F;
+            exit_F[super_arc->next->id] = super_arc->exit;
+            entry_F[super_arc->next->id] = super_arc->link->next;
+            move_F[super_arc->next->id] = super_arc->link->move;
+            open_set_F.push(super_arc->next);
+        }
+        for (SuperArc *super_arc : super_current_B->incomings) // (backwards)
+        {
+            if (move_B[super_arc->next->id] != 0)
+                continue;
+            last_B[super_arc->next->id] = super_current_B;
+            entry_B[super_arc->next->id] = super_arc->exit;
+            exit_B[super_arc->next->id] = super_arc->link->next;
+            move_B[super_arc->next->id] = super_arc->link->move;
+            open_set_B.push(super_arc->next);
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+        delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_bfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    std::queue<SuperNode *> open_set;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings)
+    {
+        last[super_arc->next->id] = super_source;
+        exit[super_arc->next->id] = super_arc->exit;
+        entry[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.push(super_arc->next);
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        SuperNode *super_current = open_set.front(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_target) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            entry[super_source->id] = source;
+            Route route = (this->*algorithm)(entry[super_current->id], target);
+            do
+            {
+                route.insert(0, 1, move[super_current->id]);
+                Node *temp_exit = exit[super_current->id];
+                super_current = last[super_current->id];
+                route.insert(0, (this->*algorithm)(entry[super_current->id], temp_exit));
+            } while (super_current != super_source);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->outgoings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            exit[super_arc->next->id] = super_arc->exit;
+            entry[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.push(super_arc->next);
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_rbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    std::queue<SuperNode *> open_set;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_target->incomings)
+    {
+        last[super_arc->next->id] = super_target;
+        entry[super_arc->next->id] = super_arc->exit;
+        exit[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.push(super_arc->next);
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        SuperNode *super_current = open_set.front(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_source) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            exit[super_target->id] = target;
+            Route route = (this->*algorithm)(source, exit[super_current->id]);
+            do
+            {
+                route += move[super_current->id];
+                Node *temp_entry = entry[super_current->id];
+                super_current = last[super_current->id];
+                route += (this->*algorithm)(temp_entry, exit[super_current->id]);
+            } while (super_current != super_target);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->incomings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            entry[super_arc->next->id] = super_arc->exit;
+            exit[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.push(super_arc->next);
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_current_F = super_source,
+              *super_target = target->super, *super_current_B = super_target,
+              **last_F = new SuperNode *[congraph.size()](),
+              **last_B = new SuperNode *[congraph.size()]();
+    Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
+         **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()]();
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
+    Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
+    std::queue<SuperNode *> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings) // (forwards)
+    {
+        last_F[super_arc->next->id] = super_source;
+        exit_F[super_arc->next->id] = super_arc->exit;
+        entry_F[super_arc->next->id] = super_arc->link->next;
+        move_F[super_arc->next->id] = super_arc->link->move;
+        open_set_F.push(super_arc->next);
+    }
+    for (SuperArc *super_arc : super_target->incomings) // (backwards)
+    {
+        last_B[super_arc->next->id] = super_target;
+        entry_B[super_arc->next->id] = super_arc->exit;
+        exit_B[super_arc->next->id] = super_arc->link->next;
+        move_B[super_arc->next->id] = super_arc->link->move;
+        open_set_B.push(super_arc->next);
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+
+        super_current_F = open_set_F.front(); // get entry super node (forwards)
+        open_set_F.pop();
+
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+
+            super_current_B = super_current_F;
+            Route route = (this->*algorithm)(entry_F[super_current_F->id], exit_B[super_current_F->id]);
+            do
+            {
+                route.insert(0, 1, move_F[super_current_F->id]);
+                Node *temp_exit = exit_F[super_current_F->id];
+                super_current_F = last_F[super_current_F->id];
+                route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+            } while (super_current_F != super_source);
+            if (super_current_B != super_target)
+                do
+                {
+                    route += move_B[super_current_B->id];
+                    Node *temp_entry = entry_B[super_current_B->id];
+                    super_current_B = last_B[super_current_B->id];
+                    route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+                } while (super_current_B != super_target);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        super_current_B = open_set_B.front(); // get entry super node (backwards)
+        open_set_B.pop();
+
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+
+            super_current_F = super_current_B;
+            Route route = (this->*algorithm)(entry_F[super_current_B->id], exit_B[super_current_B->id]);
+            do
+            {
+                route += move_B[super_current_B->id];
+                Node *temp_entry = entry_B[super_current_B->id];
+                super_current_B = last_B[super_current_B->id];
+                route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+            } while (super_current_B != super_target);
+            if (super_current_B != super_source)
+                do
+                {
+                    route.insert(0, 1, move_F[super_current_F->id]);
+                    Node *temp_exit = exit_F[super_current_F->id];
+                    super_current_F = last_F[super_current_F->id];
+                    route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+                } while (super_current_F != super_source);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current_F->outgoings) // (forwards)
+        {
+            if (move_F[super_arc->next->id] != 0)
+                continue;
+            last_F[super_arc->next->id] = super_current_F;
+            exit_F[super_arc->next->id] = super_arc->exit;
+            entry_F[super_arc->next->id] = super_arc->link->next;
+            move_F[super_arc->next->id] = super_arc->link->move;
+            open_set_F.push(super_arc->next);
+        }
+        for (SuperArc *super_arc : super_current_B->incomings) // (backwards)
+        {
+            if (move_B[super_arc->next->id] != 0)
+                continue;
+            last_B[super_arc->next->id] = super_current_B;
+            entry_B[super_arc->next->id] = super_arc->exit;
+            exit_B[super_arc->next->id] = super_arc->link->next;
+            move_B[super_arc->next->id] = super_arc->link->move;
+            open_set_B.push(super_arc->next);
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+        delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_gbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    auto heuristic = [target](Node *n)
+    { return manhattan_distance(target->position, n->position); };
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMinCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second > b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings)
+    {
+        last[super_arc->next->id] = super_source;
+        exit[super_arc->next->id] = super_arc->exit;
+        entry[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [super_current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_target) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            entry[super_source->id] = source;
+            Route route = (this->*algorithm)(entry[super_current->id], target);
+            do
+            {
+                route.insert(0, 1, move[super_current->id]);
+                Node *temp_exit = exit[super_current->id];
+                super_current = last[super_current->id];
+                route.insert(0, (this->*algorithm)(entry[super_current->id], temp_exit));
+            } while (super_current != super_source);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->outgoings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            exit[super_arc->next->id] = super_arc->exit;
+            entry[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_rgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
     Move *move = new Move[congraph.size()]();
     auto heuristic = [source](Node *n)
     { return manhattan_distance(source->position, n->position); };
@@ -1016,35 +2310,37 @@ Lattice::Route Lattice::super_rgbfs(Node *source, Node *target, SearchMode sub_s
     };
     std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set;
 
-    // track initial neighbors
+    // track initial adjacencies
     for (SuperArc *super_arc : super_target->incomings)
     {
         last[super_arc->next->id] = super_target;
-        exit[super_arc->next->id] = super_arc->exit;
-        next[super_arc->next->id] = super_arc->enter->next;
-        move[super_arc->next->id] = super_arc->enter->move;
-        open_set.emplace(super_arc->next, heuristic(super_arc->enter->next));
+        entry[super_arc->next->id] = super_arc->exit;
+        exit[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
     }
 
     // search
     while (!open_set.empty())
     {
-        auto [super_current, key] = open_set.top(); // get next node
+        auto [super_current, key] = open_set.top(); // get entry node
         open_set.pop();
 
         if (super_current == super_source) // goal check
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
-            Route route = (this->*algorithm)(source, next[super_current->id]);
-            next[super_target->id] = target;
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            exit[super_target->id] = target;
+            Route route = (this->*algorithm)(source, exit[super_current->id]);
             do
             {
                 route += move[super_current->id];
-                Node *temp_exit = exit[super_current->id];
+                Node *temp_entry = entry[super_current->id];
                 super_current = last[super_current->id];
-                route += (this->*algorithm)(temp_exit, next[super_current->id]);
+                route += (this->*algorithm)(temp_entry, exit[super_current->id]);
             } while (super_current != super_target);
-            delete[] last, delete[] exit, delete[] next, delete[] move;
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
             return route;
         }
 
@@ -1054,32 +2350,35 @@ Lattice::Route Lattice::super_rgbfs(Node *source, Node *target, SearchMode sub_s
             if (move[super_arc->next->id] != 0)
                 continue;
             last[super_arc->next->id] = super_current;
-            exit[super_arc->next->id] = super_arc->exit;
-            next[super_arc->next->id] = super_arc->enter->next;
-            move[super_arc->next->id] = super_arc->enter->move;
-            open_set.emplace(super_arc->next, heuristic(super_arc->enter->next));
+            entry[super_arc->next->id] = super_arc->exit;
+            exit[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
         }
     }
 
     // when no path is found
-    delete[] last, delete[] exit, delete[] next, delete[] move;
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, SearchMode sub_search_mode) const // todo bug
+Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
 {
     // search meta data
-    SuperNode *super_source = source->super, *super_target = target->super;
-    Node *focus_F = source, *focus_B = target;
-    SuperNode **last_F = new SuperNode *[congraph.size()](),
+    SuperNode *super_source = source->super, *super_target = target->super,
+              *super_current_F = super_source, *super_current_B = super_target,
+              **last_F = new SuperNode *[congraph.size()](),
               **last_B = new SuperNode *[congraph.size()]();
     Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
-         **next_F = new Node *[congraph.size()](), **next_B = new Node *[congraph.size()]();
+         **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()](),
+         *focus_F = source, *focus_B = target;
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
     Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
     auto heuristic_F = [&focus_B](Node *n)
     { return manhattan_distance(focus_B->position, n->position); };
     auto heuristic_B = [&focus_F](Node *n)
     { return manhattan_distance(focus_F->position, n->position); };
+    size_t key_F, key_B;
     using Pair = std::pair<SuperNode *, size_t>;
     struct PairMinCmp
     {
@@ -1087,141 +2386,1044 @@ Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, SearchMode sub_
     };
     std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set_F, open_set_B;
 
-    // track initial neighbors
+    // track initial adjacencies
     for (SuperArc *super_arc : super_source->outgoings) // (forwards)
     {
         last_F[super_arc->next->id] = super_source;
         exit_F[super_arc->next->id] = super_arc->exit;
-        next_F[super_arc->next->id] = super_arc->enter->next;
-        move_F[super_arc->next->id] = super_arc->enter->move;
-        open_set_F.emplace(super_arc->next, heuristic_F(super_arc->enter->next));
+        entry_F[super_arc->next->id] = super_arc->link->next;
+        move_F[super_arc->next->id] = super_arc->link->move;
+        open_set_F.emplace(super_arc->next, heuristic_F(super_arc->link->next));
     }
     for (SuperArc *super_arc : super_target->incomings) // (backwards)
     {
-
         last_B[super_arc->next->id] = super_target;
-        exit_B[super_arc->next->id] = super_arc->exit;
-        next_B[super_arc->next->id] = super_arc->enter->next;
-        move_B[super_arc->next->id] = super_arc->enter->move;
-        open_set_B.emplace(super_arc->next, heuristic_B(super_arc->enter->next));
+        entry_B[super_arc->next->id] = super_arc->exit;
+        exit_B[super_arc->next->id] = super_arc->link->next;
+        move_B[super_arc->next->id] = super_arc->link->move;
+        open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
     }
 
     // search
-    while (!open_set_F.empty() && !open_set_B.empty())
+    while (true)
     {
-        auto [super_current_F, key_F] = open_set_F.top(); // get next node (forwards)
+        if (open_set_F.empty())
+            break;
+
+        std::tie(super_current_F, key_F) = open_set_F.top(); // get entry super node (forwards)
         open_set_F.pop();
 
-        auto [super_current_B, key_B] = open_set_B.top(); // get next node (backwards)
-        open_set_B.pop();
-
-        if (move_B[super_current_F->id] != 0) // goal check (forwards)
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
-            SuperNode *super_current = super_current_F;
-            Route route = (this->*algorithm)(next_F[super_current->id], target);
-            next_F[super_source->id] = source;
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            super_current_B = super_current_F;
+            Route route = (this->*algorithm)(entry_F[super_current_F->id], exit_B[super_current_F->id]);
             do
             {
-                route.insert(0, 1, move_F[super_current->id]);
-                Node *temp_exit = exit_F[super_current->id];
-                super_current = last_F[super_current->id];
-                route.insert(0, (this->*algorithm)(next_F[super_current->id], temp_exit));
-            } while (super_current != super_source);
-            // todo finish
-            delete[] last_F, delete[] exit_F, delete[] next_F, delete[] move_F;
-            delete[] last_B, delete[] exit_B, delete[] next_B, delete[] move_B;
+                route.insert(0, 1, move_F[super_current_F->id]);
+                Node *temp_exit = exit_F[super_current_F->id];
+                super_current_F = last_F[super_current_F->id];
+                route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+            } while (super_current_F != super_source);
+            if (super_current_B != super_target)
+                do
+                {
+                    route += move_B[super_current_B->id];
+                    Node *temp_entry = entry_B[super_current_B->id];
+                    super_current_B = last_B[super_current_B->id];
+                    route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+                } while (super_current_B != super_target);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
             return route;
         }
 
-        focus_F = next_F[super_current_F->id];
-        focus_B = next_B[super_current_B->id];
+        if (open_set_B.empty())
+            break;
+        std::tie(super_current_B, key_B) = open_set_B.top(); // get entry super node (backwards)
+        open_set_B.pop();
+
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            super_current_F = super_current_B;
+            Route route = (this->*algorithm)(entry_F[super_current_B->id], exit_B[super_current_B->id]);
+            do
+            {
+                route += move_B[super_current_B->id];
+                Node *temp_entry = entry_B[super_current_B->id];
+                super_current_B = last_B[super_current_B->id];
+                route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+            } while (super_current_B != super_target);
+            if (super_current_B != super_source)
+                do
+                {
+                    route.insert(0, 1, move_F[super_current_F->id]);
+                    Node *temp_exit = exit_F[super_current_F->id];
+                    super_current_F = last_F[super_current_F->id];
+                    route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+                } while (super_current_F != super_source);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
 
         // track current adjacencies
+        focus_F = entry_F[super_current_F->id];
         for (SuperArc *super_arc : super_current_F->outgoings) // (forwards)
         {
             if (move_F[super_arc->next->id] != 0)
                 continue;
             last_F[super_arc->next->id] = super_current_F;
             exit_F[super_arc->next->id] = super_arc->exit;
-            next_F[super_arc->next->id] = super_arc->enter->next;
-            move_F[super_arc->next->id] = super_arc->enter->move;
-            open_set_F.emplace(super_arc->next, heuristic_F(super_arc->enter->next));
+            entry_F[super_arc->next->id] = super_arc->link->next;
+            move_F[super_arc->next->id] = super_arc->link->move;
+            open_set_F.emplace(super_arc->next, heuristic_F(super_arc->link->next));
         }
+        focus_B = exit_B[super_current_B->id];
         for (SuperArc *super_arc : super_current_B->incomings) // (backwards)
         {
             if (move_B[super_arc->next->id] != 0)
                 continue;
             last_B[super_arc->next->id] = super_current_B;
-            exit_B[super_arc->next->id] = super_arc->exit;
-            next_B[super_arc->next->id] = super_arc->enter->next;
-            move_B[super_arc->next->id] = super_arc->enter->move;
-            open_set_B.emplace(super_arc->next, heuristic_B(super_arc->enter->next));
+            entry_B[super_arc->next->id] = super_arc->exit;
+            exit_B[super_arc->next->id] = super_arc->link->next;
+            move_B[super_arc->next->id] = super_arc->link->move;
+            open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
         }
     }
 
     // when no path is found
-    delete[] last_F, delete[] exit_F, delete[] next_F, delete[] move_F;
-    delete[] last_B, delete[] exit_B, delete[] next_B, delete[] move_B;
+    delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+        delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_astar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                    [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+Lattice::Route Lattice::super_astar(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    auto heuristic = [source, target](Node *n)
+    { return manhattan_distance(source->position, n->position) +
+             manhattan_distance(target->position, n->position); };
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMinCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second > b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set;
 
-Lattice::Route Lattice::super_rastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                     [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings)
+    {
+        last[super_arc->next->id] = super_source;
+        exit[super_arc->next->id] = super_arc->exit;
+        entry[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+    }
 
-Lattice::Route Lattice::super_bdastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                      [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+    // search
+    while (!open_set.empty())
+    {
+        auto [super_current, key] = open_set.top(); // get entry node
+        open_set.pop();
 
-Lattice::Route Lattice::super_ngbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                    [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+        if (super_current == super_target) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            entry[super_source->id] = source;
+            Route route = (this->*algorithm)(entry[super_current->id], target);
+            do
+            {
+                route.insert(0, 1, move[super_current->id]);
+                Node *temp_exit = exit[super_current->id];
+                super_current = last[super_current->id];
+                route.insert(0, (this->*algorithm)(entry[super_current->id], temp_exit));
+            } while (super_current != super_source);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
 
-Lattice::Route Lattice::super_rngbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                     [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->outgoings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            exit[super_arc->next->id] = super_arc->exit;
+            entry[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+        }
+    }
 
-Lattice::Route Lattice::super_bdngbfs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                      [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
 
-Lattice::Route Lattice::super_nastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                     [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+Lattice::Route Lattice::super_rastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    auto heuristic = [target, source](Node *n)
+    { return manhattan_distance(target->position, n->position) +
+             manhattan_distance(source->position, n->position); };
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMinCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second > b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set;
 
-Lattice::Route Lattice::super_rnastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                      [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_target->incomings)
+    {
+        last[super_arc->next->id] = super_target;
+        entry[super_arc->next->id] = super_arc->exit;
+        exit[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+    }
 
-Lattice::Route Lattice::super_bdnastar([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                       [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+    // search
+    while (!open_set.empty())
+    {
+        auto [super_current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_source) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            exit[super_target->id] = target;
+            Route route = (this->*algorithm)(source, exit[super_current->id]);
+            do
+            {
+                route += move[super_current->id];
+                Node *temp_entry = entry[super_current->id];
+                super_current = last[super_current->id];
+                route += (this->*algorithm)(temp_entry, exit[super_current->id]);
+            } while (super_current != super_target);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->incomings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            entry[super_arc->next->id] = super_arc->exit;
+            exit[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              *super_current_F = super_source, *super_current_B = super_target,
+              **last_F = new SuperNode *[congraph.size()](),
+              **last_B = new SuperNode *[congraph.size()]();
+    Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
+         **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()](),
+         *focus_F = source, *focus_B = target;
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
+    Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
+    auto heuristic_F = [source, &focus_B](Node *n)
+    { return manhattan_distance(source->position, n->position) +
+             manhattan_distance(focus_B->position, n->position); };
+    auto heuristic_B = [target, &focus_F](Node *n)
+    { return manhattan_distance(target->position, n->position) +
+             manhattan_distance(focus_F->position, n->position); };
+    size_t key_F, key_B;
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMinCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second > b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMinCmp> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings) // (forwards)
+    {
+        last_F[super_arc->next->id] = super_source;
+        exit_F[super_arc->next->id] = super_arc->exit;
+        entry_F[super_arc->next->id] = super_arc->link->next;
+        move_F[super_arc->next->id] = super_arc->link->move;
+        open_set_F.emplace(super_arc->next, heuristic_F(super_arc->link->next));
+    }
+    for (SuperArc *super_arc : super_target->incomings) // (backwards)
+    {
+        last_B[super_arc->next->id] = super_target;
+        entry_B[super_arc->next->id] = super_arc->exit;
+        exit_B[super_arc->next->id] = super_arc->link->next;
+        move_B[super_arc->next->id] = super_arc->link->move;
+        open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+
+        std::tie(super_current_F, key_F) = open_set_F.top(); // get entry super node (forwards)
+        open_set_F.pop();
+
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            super_current_B = super_current_F;
+            Route route = (this->*algorithm)(entry_F[super_current_F->id], exit_B[super_current_F->id]);
+            do
+            {
+                route.insert(0, 1, move_F[super_current_F->id]);
+                Node *temp_exit = exit_F[super_current_F->id];
+                super_current_F = last_F[super_current_F->id];
+                route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+            } while (super_current_F != super_source);
+            if (super_current_B != super_target)
+                do
+                {
+                    route += move_B[super_current_B->id];
+                    Node *temp_entry = entry_B[super_current_B->id];
+                    super_current_B = last_B[super_current_B->id];
+                    route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+                } while (super_current_B != super_target);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        std::tie(super_current_B, key_B) = open_set_B.top(); // get entry super node (backwards)
+        open_set_B.pop();
+
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            super_current_F = super_current_B;
+            Route route = (this->*algorithm)(entry_F[super_current_B->id], exit_B[super_current_B->id]);
+            do
+            {
+                route += move_B[super_current_B->id];
+                Node *temp_entry = entry_B[super_current_B->id];
+                super_current_B = last_B[super_current_B->id];
+                route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+            } while (super_current_B != super_target);
+            if (super_current_B != super_source)
+                do
+                {
+                    route.insert(0, 1, move_F[super_current_F->id]);
+                    Node *temp_exit = exit_F[super_current_F->id];
+                    super_current_F = last_F[super_current_F->id];
+                    route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+                } while (super_current_F != super_source);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        focus_F = entry_F[super_current_F->id];
+        for (SuperArc *super_arc : super_current_F->outgoings) // (forwards)
+        {
+            if (move_F[super_arc->next->id] != 0)
+                continue;
+            last_F[super_arc->next->id] = super_current_F;
+            exit_F[super_arc->next->id] = super_arc->exit;
+            entry_F[super_arc->next->id] = super_arc->link->next;
+            move_F[super_arc->next->id] = super_arc->link->move;
+            open_set_F.emplace(super_arc->next, heuristic_F(super_arc->link->next));
+        }
+        focus_B = exit_B[super_current_B->id];
+        for (SuperArc *super_arc : super_current_B->incomings) // (backwards)
+        {
+            if (move_B[super_arc->next->id] != 0)
+                continue;
+            last_B[super_arc->next->id] = super_current_B;
+            entry_B[super_arc->next->id] = super_arc->exit;
+            exit_B[super_arc->next->id] = super_arc->link->next;
+            move_B[super_arc->next->id] = super_arc->link->move;
+            open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+        delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_ngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    auto heuristic = [target](Node *n)
+    { return manhattan_distance(target->position, n->position); };
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings)
+    {
+        last[super_arc->next->id] = super_source;
+        exit[super_arc->next->id] = super_arc->exit;
+        entry[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [super_current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_target) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            entry[super_source->id] = source;
+            Route route = (this->*algorithm)(entry[super_current->id], target);
+            do
+            {
+                route.insert(0, 1, move[super_current->id]);
+                Node *temp_exit = exit[super_current->id];
+                super_current = last[super_current->id];
+                route.insert(0, (this->*algorithm)(entry[super_current->id], temp_exit));
+            } while (super_current != super_source);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->outgoings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            exit[super_arc->next->id] = super_arc->exit;
+            entry[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_rngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    auto heuristic = [source](Node *n)
+    { return manhattan_distance(source->position, n->position); };
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_target->incomings)
+    {
+        last[super_arc->next->id] = super_target;
+        entry[super_arc->next->id] = super_arc->exit;
+        exit[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [super_current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_source) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            exit[super_target->id] = target;
+            Route route = (this->*algorithm)(source, exit[super_current->id]);
+            do
+            {
+                route += move[super_current->id];
+                Node *temp_entry = entry[super_current->id];
+                super_current = last[super_current->id];
+                route += (this->*algorithm)(temp_entry, exit[super_current->id]);
+            } while (super_current != super_target);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->incomings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            entry[super_arc->next->id] = super_arc->exit;
+            exit[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              *super_current_F = super_source, *super_current_B = super_target,
+              **last_F = new SuperNode *[congraph.size()](),
+              **last_B = new SuperNode *[congraph.size()]();
+    Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
+         **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()](),
+         *focus_F = source, *focus_B = target;
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
+    Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
+    auto heuristic_F = [&focus_B](Node *n)
+    { return manhattan_distance(focus_B->position, n->position); };
+    auto heuristic_B = [&focus_F](Node *n)
+    { return manhattan_distance(focus_F->position, n->position); };
+    size_t key_F, key_B;
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings) // (forwards)
+    {
+        last_F[super_arc->next->id] = super_source;
+        exit_F[super_arc->next->id] = super_arc->exit;
+        entry_F[super_arc->next->id] = super_arc->link->next;
+        move_F[super_arc->next->id] = super_arc->link->move;
+        open_set_F.emplace(super_arc->next, heuristic_F(super_arc->link->next));
+    }
+    for (SuperArc *super_arc : super_target->incomings) // (backwards)
+    {
+        last_B[super_arc->next->id] = super_target;
+        entry_B[super_arc->next->id] = super_arc->exit;
+        exit_B[super_arc->next->id] = super_arc->link->next;
+        move_B[super_arc->next->id] = super_arc->link->move;
+        open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+
+        std::tie(super_current_F, key_F) = open_set_F.top(); // get entry super node (forwards)
+        open_set_F.pop();
+
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            super_current_B = super_current_F;
+            Route route = (this->*algorithm)(entry_F[super_current_F->id], exit_B[super_current_F->id]);
+            do
+            {
+                route.insert(0, 1, move_F[super_current_F->id]);
+                Node *temp_exit = exit_F[super_current_F->id];
+                super_current_F = last_F[super_current_F->id];
+                route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+            } while (super_current_F != super_source);
+            if (super_current_B != super_target)
+                do
+                {
+                    route += move_B[super_current_B->id];
+                    Node *temp_entry = entry_B[super_current_B->id];
+                    super_current_B = last_B[super_current_B->id];
+                    route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+                } while (super_current_B != super_target);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        std::tie(super_current_B, key_B) = open_set_B.top(); // get entry super node (backwards)
+        open_set_B.pop();
+
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            super_current_F = super_current_B;
+            Route route = (this->*algorithm)(entry_F[super_current_B->id], exit_B[super_current_B->id]);
+            do
+            {
+                route += move_B[super_current_B->id];
+                Node *temp_entry = entry_B[super_current_B->id];
+                super_current_B = last_B[super_current_B->id];
+                route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+            } while (super_current_B != super_target);
+            if (super_current_B != super_source)
+                do
+                {
+                    route.insert(0, 1, move_F[super_current_F->id]);
+                    Node *temp_exit = exit_F[super_current_F->id];
+                    super_current_F = last_F[super_current_F->id];
+                    route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+                } while (super_current_F != super_source);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        focus_F = entry_F[super_current_F->id];
+        for (SuperArc *super_arc : super_current_F->outgoings) // (forwards)
+        {
+            if (move_F[super_arc->next->id] != 0)
+                continue;
+            last_F[super_arc->next->id] = super_current_F;
+            exit_F[super_arc->next->id] = super_arc->exit;
+            entry_F[super_arc->next->id] = super_arc->link->next;
+            move_F[super_arc->next->id] = super_arc->link->move;
+            open_set_F.emplace(super_arc->next, heuristic_F(super_arc->link->next));
+        }
+        focus_B = exit_B[super_current_B->id];
+        for (SuperArc *super_arc : super_current_B->incomings) // (backwards)
+        {
+            if (move_B[super_arc->next->id] != 0)
+                continue;
+            last_B[super_arc->next->id] = super_current_B;
+            entry_B[super_arc->next->id] = super_arc->exit;
+            exit_B[super_arc->next->id] = super_arc->link->next;
+            move_B[super_arc->next->id] = super_arc->link->move;
+            open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+        delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_nastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    auto heuristic = [source, target](Node *n)
+    { return manhattan_distance(source->position, n->position) +
+             manhattan_distance(target->position, n->position); };
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings)
+    {
+        last[super_arc->next->id] = super_source;
+        exit[super_arc->next->id] = super_arc->exit;
+        entry[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [super_current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_target) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            entry[super_source->id] = source;
+            Route route = (this->*algorithm)(entry[super_current->id], target);
+            do
+            {
+                route.insert(0, 1, move[super_current->id]);
+                Node *temp_exit = exit[super_current->id];
+                super_current = last[super_current->id];
+                route.insert(0, (this->*algorithm)(entry[super_current->id], temp_exit));
+            } while (super_current != super_source);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->outgoings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            exit[super_arc->next->id] = super_arc->exit;
+            entry[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_rnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              **last = new SuperNode *[congraph.size()]();
+    Node **exit = new Node *[congraph.size()](),
+         **entry = new Node *[congraph.size()]();
+    Move *move = new Move[congraph.size()]();
+    auto heuristic = [target, source](Node *n)
+    { return manhattan_distance(target->position, n->position) +
+             manhattan_distance(source->position, n->position); };
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_target->incomings)
+    {
+        last[super_arc->next->id] = super_target;
+        entry[super_arc->next->id] = super_arc->exit;
+        exit[super_arc->next->id] = super_arc->link->next;
+        move[super_arc->next->id] = super_arc->link->move;
+        open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+    }
+
+    // search
+    while (!open_set.empty())
+    {
+        auto [super_current, key] = open_set.top(); // get entry node
+        open_set.pop();
+
+        if (super_current == super_source) // goal check
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            exit[super_target->id] = target;
+            Route route = (this->*algorithm)(source, exit[super_current->id]);
+            do
+            {
+                route += move[super_current->id];
+                Node *temp_entry = entry[super_current->id];
+                super_current = last[super_current->id];
+                route += (this->*algorithm)(temp_entry, exit[super_current->id]);
+            } while (super_current != super_target);
+            delete[] last, delete[] exit, delete[] entry, delete[] move;
+            return route;
+        }
+
+        // track current adjacencies
+        for (SuperArc *super_arc : super_current->incomings)
+        {
+            if (move[super_arc->next->id] != 0)
+                continue;
+            last[super_arc->next->id] = super_current;
+            entry[super_arc->next->id] = super_arc->exit;
+            exit[super_arc->next->id] = super_arc->link->next;
+            move[super_arc->next->id] = super_arc->link->move;
+            open_set.emplace(super_arc->next, heuristic(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last, delete[] exit, delete[] entry, delete[] move;
+    throw Untraversable(source->position, target->position);
+}
+
+Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+{
+    // search meta data
+    SuperNode *super_source = source->super, *super_target = target->super,
+              *super_current_F = super_source, *super_current_B = super_target,
+              **last_F = new SuperNode *[congraph.size()](),
+              **last_B = new SuperNode *[congraph.size()]();
+    Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
+         **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()](),
+         *focus_F = source, *focus_B = target;
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
+    Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
+    auto heuristic_F = [source, &focus_B](Node *n)
+    { return manhattan_distance(source->position, n->position) +
+             manhattan_distance(focus_B->position, n->position); };
+    auto heuristic_B = [target, &focus_F](Node *n)
+    { return manhattan_distance(target->position, n->position) +
+             manhattan_distance(focus_F->position, n->position); };
+    size_t key_F, key_B;
+    using Pair = std::pair<SuperNode *, size_t>;
+    struct PairMaxCmp
+    {
+        bool operator()(const Pair &a, const Pair &b) { return a.second < b.second; }
+    };
+    std::priority_queue<Pair, std::vector<Pair>, PairMaxCmp> open_set_F, open_set_B;
+
+    // track initial adjacencies
+    for (SuperArc *super_arc : super_source->outgoings) // (forwards)
+    {
+        last_F[super_arc->next->id] = super_source;
+        exit_F[super_arc->next->id] = super_arc->exit;
+        entry_F[super_arc->next->id] = super_arc->link->next;
+        move_F[super_arc->next->id] = super_arc->link->move;
+        open_set_F.emplace(super_arc->next, heuristic_F(super_arc->link->next));
+    }
+    for (SuperArc *super_arc : super_target->incomings) // (backwards)
+    {
+        last_B[super_arc->next->id] = super_target;
+        entry_B[super_arc->next->id] = super_arc->exit;
+        exit_B[super_arc->next->id] = super_arc->link->next;
+        move_B[super_arc->next->id] = super_arc->link->move;
+        open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
+    }
+
+    // search
+    while (true)
+    {
+        if (open_set_F.empty())
+            break;
+
+        std::tie(super_current_F, key_F) = open_set_F.top(); // get entry super node (forwards)
+        open_set_F.pop();
+
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            super_current_B = super_current_F;
+            Route route = (this->*algorithm)(entry_F[super_current_F->id], exit_B[super_current_F->id]);
+            do
+            {
+                route.insert(0, 1, move_F[super_current_F->id]);
+                Node *temp_exit = exit_F[super_current_F->id];
+                super_current_F = last_F[super_current_F->id];
+                route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+            } while (super_current_F != super_source);
+            if (super_current_B != super_target)
+                do
+                {
+                    route += move_B[super_current_B->id];
+                    Node *temp_entry = entry_B[super_current_B->id];
+                    super_current_B = last_B[super_current_B->id];
+                    route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+                } while (super_current_B != super_target);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        if (open_set_B.empty())
+            break;
+        std::tie(super_current_B, key_B) = open_set_B.top(); // get entry super node (backwards)
+        open_set_B.pop();
+
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
+        {
+            Algorithm algorithm = get_algorithm(sub_search_mode);
+            if (algorithm == nullptr)
+                throw InvalidSearchMode(sub_search_mode);
+            super_current_F = super_current_B;
+            Route route = (this->*algorithm)(entry_F[super_current_B->id], exit_B[super_current_B->id]);
+            do
+            {
+                route += move_B[super_current_B->id];
+                Node *temp_entry = entry_B[super_current_B->id];
+                super_current_B = last_B[super_current_B->id];
+                route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
+            } while (super_current_B != super_target);
+            if (super_current_B != super_source)
+                do
+                {
+                    route.insert(0, 1, move_F[super_current_F->id]);
+                    Node *temp_exit = exit_F[super_current_F->id];
+                    super_current_F = last_F[super_current_F->id];
+                    route.insert(0, (this->*algorithm)(entry_F[super_current_F->id], temp_exit));
+                } while (super_current_F != super_source);
+            delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+                delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+            return route;
+        }
+
+        // track current adjacencies
+        focus_F = entry_F[super_current_F->id];
+        for (SuperArc *super_arc : super_current_F->outgoings) // (forwards)
+        {
+            if (move_F[super_arc->next->id] != 0)
+                continue;
+            last_F[super_arc->next->id] = super_current_F;
+            exit_F[super_arc->next->id] = super_arc->exit;
+            entry_F[super_arc->next->id] = super_arc->link->next;
+            move_F[super_arc->next->id] = super_arc->link->move;
+            open_set_F.emplace(super_arc->next, heuristic_F(super_arc->link->next));
+        }
+        focus_B = exit_B[super_current_B->id];
+        for (SuperArc *super_arc : super_current_B->incomings) // (backwards)
+        {
+            if (move_B[super_arc->next->id] != 0)
+                continue;
+            last_B[super_arc->next->id] = super_current_B;
+            entry_B[super_arc->next->id] = super_arc->exit;
+            exit_B[super_arc->next->id] = super_arc->link->next;
+            move_B[super_arc->next->id] = super_arc->link->move;
+            open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
+        }
+    }
+
+    // when no path is found
+    delete[] last_F, delete[] exit_F, delete[] entry_F, delete[] move_F,
+        delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
+    throw Untraversable(source->position, target->position);
+}
 
 Lattice::Route Lattice::super_jps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                  [[maybe_unused]] SearchMode sub_search_mode)
+                                  [[maybe_unused]] const SearchMode &sub_search_mode)
     const { return "Unfinished Algorithm"; }
 
 Lattice::Route Lattice::super_rjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                   [[maybe_unused]] SearchMode sub_search_mode)
+                                   [[maybe_unused]] const SearchMode &sub_search_mode)
     const { return "Unfinished Algorithm"; }
 
 Lattice::Route Lattice::super_bdjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                    [[maybe_unused]] SearchMode sub_search_mode)
+                                    [[maybe_unused]] const SearchMode &sub_search_mode)
     const { return "Unfinished Algorithm"; }
 
-Lattice::Route Lattice::super_ucs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                  [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+bool Lattice::self_check(const SearchMode &search_mode) const
+{
+    Algorithm algorithm = get_algorithm(search_mode);
+    if (algorithm == nullptr)
+        throw InvalidSearchMode(search_mode);
+    for (auto &[sp, sn] : graph)
+    {
+        for (auto &[tp, tn] : graph)
+        {
+            Route route;
+            try
+            {
+                route = (this->*algorithm)(sn, tn);
+            }
+            catch (const std::exception &e)
+            {
+                continue;
+            }
+            if (travel(sp, route) != tp)
+            {
+                LOG << sp << tp;
+                return false;
+            }
+        }
+    }
+    return true;
+}
 
-Lattice::Route Lattice::super_rucs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                   [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+bool Lattice::self_super_check(const SearchMode &super_search_mode,
+                               const SearchMode &sub_search_mode) const
+{
+    SuperAlgorithm super_algorithm = get_super_algorithm(super_search_mode);
+    if (super_algorithm == nullptr)
+        throw InvalidSearchMode(super_search_mode);
 
-Lattice::Route Lattice::super_bducs([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                    [[maybe_unused]] SearchMode sub_search_mode)
-    const { return "Unfinished Algorithm"; }
+    Algorithm algorithm = get_algorithm(sub_search_mode);
+    if (algorithm == nullptr)
+        throw InvalidSearchMode(sub_search_mode);
+
+    for (SuperNode *super1 : congraph)
+    {
+        if (super1->internals.size() == 2) // ignore windows in bastion
+            continue;
+        for (SuperNode *super2 : congraph)
+        {
+            if (super2->internals.size() == 2) // ignore windows in bastion
+                continue;
+            Node *sn = super1->internals.front(),
+                 *tn = super2->internals.back();
+            Route route;
+            try
+            {
+                route = (this->*super_algorithm)(sn, tn, sub_search_mode);
+            }
+            catch (const std::exception &e)
+            {
+                continue;
+            }
+            if (travel(sn->position, route) != tn->position)
+            {
+                LOG << sn->position << tn->position;
+                return false;
+            }
+        }
+    }
+    return true;
+}

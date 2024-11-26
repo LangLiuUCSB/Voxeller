@@ -1,9 +1,9 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O3
 
-SRCS = main.cpp Lattice.cpp
+SRCS = test.cpp Lattice.cpp
 OBJS = $(SRCS:.cpp=.o)
-TARGET = main
+TARGET = test
 
 all: $(TARGET)
 
@@ -14,7 +14,7 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 run: $(TARGET)
-	./main
+	./test
 
 leaks: $(TARGET)
 	leaks --atExit -- ./main
