@@ -7,13 +7,13 @@ struct Lattice::Node
     std::vector<Arc *> outgoings, incomings;
     SuperNode *super;
 
-    Node() noexcept = default;
-    Node(const id_t id, const Coordinate position) noexcept : id(id), position(position) {}
-    Node(const Node &) noexcept = default;
-    Node(Node &&) noexcept = default;
-    Node &operator=(const Node &) noexcept = default;
-    Node &operator=(Node &&) noexcept = default;
-    ~Node() noexcept = default;
+    Node() noexcept = default;                                                              // Default constructor
+    Node(const id_t id, const Coordinate position) noexcept : id(id), position(position) {} // Parameterized constructor
+    Node(const Node &) noexcept = default;                                                  // Copy constructor
+    Node(Node &&) noexcept = default;                                                       // Move constructor
+    Node &operator=(const Node &) noexcept = default;                                       // Copy assignment
+    Node &operator=(Node &&) noexcept = default;                                            // Move assignment
+    ~Node() noexcept = default;                                                             // Default destructor
 };
 
 struct Lattice::Arc
@@ -21,13 +21,13 @@ struct Lattice::Arc
     Node *next;
     Move move;
 
-    Arc() noexcept = default;
-    Arc(Node *next, const char move) noexcept : next(next), move(move) {}
-    Arc(const Arc &) noexcept = default;
-    Arc(Arc &&) noexcept = default;
-    Arc &operator=(const Arc &) noexcept = default;
-    Arc &operator=(Arc &&) noexcept = default;
-    ~Arc() noexcept = default;
+    Arc() noexcept = default;                                             // Default constructor
+    Arc(Node *next, const char move) noexcept : next(next), move(move) {} // Parameterized constructor
+    Arc(const Arc &) noexcept = default;                                  // Copy constructor
+    Arc(Arc &&) noexcept = default;                                       // Move constructor
+    Arc &operator=(const Arc &) noexcept = default;                       // Copy assignment
+    Arc &operator=(Arc &&) noexcept = default;                            // Move assignment
+    ~Arc() noexcept = default;                                            // Default destructor
 };
 
 struct Lattice::SuperNode
@@ -36,13 +36,13 @@ struct Lattice::SuperNode
     std::vector<Node *> internals;
     std::vector<SuperArc *> outgoings, incomings;
 
-    SuperNode() noexcept = default;
-    SuperNode(const id_t id) noexcept : id(id) {}
-    SuperNode(const SuperNode &) noexcept = default;
-    SuperNode(SuperNode &&) noexcept = default;
-    SuperNode &operator=(const SuperNode &) noexcept = default;
-    SuperNode &operator=(SuperNode &&) noexcept = default;
-    ~SuperNode() noexcept = default;
+    SuperNode() noexcept = default;                             // Default constructor
+    SuperNode(const id_t id) noexcept : id(id) {}               // Parameterized constructor
+    SuperNode(const SuperNode &) noexcept = default;            // Copy constructor
+    SuperNode(SuperNode &&) noexcept = default;                 // Move constructor
+    SuperNode &operator=(const SuperNode &) noexcept = default; // Copy assignment
+    SuperNode &operator=(SuperNode &&) noexcept = default;      // Move assignment
+    ~SuperNode() noexcept = default;                            // Default destructor
 };
 
 struct Lattice::SuperArc
@@ -51,14 +51,15 @@ struct Lattice::SuperArc
     Node *exit;
     Arc *link;
 
-    SuperArc() noexcept = default;
-    SuperArc(SuperNode *next, Node *exit, Arc *link) noexcept
-        : next(next), exit(exit), link(link) {}
-    SuperArc(const SuperArc &) noexcept = default;
-    SuperArc(SuperArc &&) noexcept = default;
-    SuperArc &operator=(const SuperArc &) noexcept = default;
-    SuperArc &operator=(SuperArc &&) noexcept = default;
-    ~SuperArc() noexcept = default;
+    SuperArc() noexcept = default;                                                                 // Default constructor
+    SuperArc(SuperNode *next, Node *exit, Arc *link) noexcept : next(next), exit(exit), link(link) // Parameterized constructor
+    {
+    }
+    SuperArc(const SuperArc &) noexcept = default;            // Copy constructor
+    SuperArc(SuperArc &&) noexcept = default;                 // Move constructor
+    SuperArc &operator=(const SuperArc &) noexcept = default; // Copy assignment
+    SuperArc &operator=(SuperArc &&) noexcept = default;      // Move assignment
+    ~SuperArc() noexcept = default;                           // Default destructor
 };
 
 #define VOID 7
@@ -72,59 +73,6 @@ struct Lattice::SuperArc
 #define HAS_ADJACENCY < 4
 
 Lattice::Lattice(const FilePath &file_path) { parse(file_path); }
-
-Lattice::~Lattice() noexcept
-{
-    for (const auto &[position, node] : graph)
-    {
-        for (const auto &arc : node->outgoings)
-            delete arc;
-        for (const auto &arc : node->incomings)
-            delete arc;
-        delete node;
-    }
-    for (const auto &supernode : congraph)
-    {
-        for (const auto &superarc : supernode->outgoings)
-            delete superarc;
-        for (const auto &superarc : supernode->incomings)
-            delete superarc;
-        delete supernode;
-    }
-}
-
-void Lattice::tarjan_dfs(Node *u, int visit_time[], int low_link[], bool is_on_stack[],
-                         std::stack<Node *> &stack, int &current_time, id_t &id) noexcept
-{
-    visit_time[u->id] = low_link[u->id] = ++current_time;
-    stack.push(u);
-    is_on_stack[u->id] = true;
-    for (Arc *arc : u->outgoings)
-    {
-        Node *v = arc->next;
-        if (visit_time[v->id] == 0)
-        {
-            tarjan_dfs(v, visit_time, low_link, is_on_stack, stack, current_time, id);
-            low_link[u->id] = std::min(low_link[u->id], low_link[v->id]);
-        }
-        else if (is_on_stack[v->id] == true)
-            low_link[u->id] = std::min(low_link[u->id], visit_time[v->id]);
-    }
-    if (low_link[u->id] == visit_time[u->id])
-    {
-        SuperNode *component = new SuperNode(id++);
-        Node *current;
-        do
-        {
-            current = stack.top();
-            stack.pop();
-            is_on_stack[current->id] = false;
-            current->super = component;
-            component->internals.push_back(current);
-        } while (current != u);
-        congraph.push_back(component);
-    }
-}
 
 void Lattice::parse(const FilePath &file_path) // todo handle bad parse
 {
@@ -246,6 +194,26 @@ void Lattice::parse(const FilePath &file_path) // todo handle bad parse
     }
 }
 
+Lattice::~Lattice() noexcept
+{
+    for (const auto &[position, node] : graph)
+    {
+        for (const auto &arc : node->outgoings)
+            delete arc;
+        for (const auto &arc : node->incomings)
+            delete arc;
+        delete node;
+    }
+    for (const auto &supernode : congraph)
+    {
+        for (const auto &superarc : supernode->outgoings)
+            delete superarc;
+        for (const auto &superarc : supernode->incomings)
+            delete superarc;
+        delete supernode;
+    }
+}
+
 void Lattice::condense() noexcept
 {
     int *visit_time = new int[graph.size()]();
@@ -272,7 +240,127 @@ void Lattice::condense() noexcept
         }
 }
 
-Lattice::Algorithm Lattice::get_algorithm(SearchMode search_mode) const noexcept
+void Lattice::tarjan_dfs(Node *u, int visit_time[], int low_link[], bool is_on_stack[],
+                         std::stack<Node *> &stack, int &current_time, id_t &id) noexcept
+{
+    visit_time[u->id] = low_link[u->id] = ++current_time;
+    stack.push(u);
+    is_on_stack[u->id] = true;
+    for (Arc *arc : u->outgoings)
+    {
+        Node *v = arc->next;
+        if (visit_time[v->id] == 0)
+        {
+            tarjan_dfs(v, visit_time, low_link, is_on_stack, stack, current_time, id);
+            low_link[u->id] = std::min(low_link[u->id], low_link[v->id]);
+        }
+        else if (is_on_stack[v->id] == true)
+            low_link[u->id] = std::min(low_link[u->id], visit_time[v->id]);
+    }
+    if (low_link[u->id] == visit_time[u->id])
+    {
+        SuperNode *component = new SuperNode(id++);
+        Node *current;
+        do
+        {
+            current = stack.top();
+            stack.pop();
+            is_on_stack[current->id] = false;
+            current->super = component;
+            component->internals.push_back(current);
+        } while (current != u);
+        congraph.push_back(component);
+    }
+}
+
+Coordinate Lattice::travel(const Coordinate &source, const Route &route) const
+{
+    if (graph.find(source) == graph.end()) // check source validity
+        throw InvalidSource(source);
+    Node *current = graph.at(source);
+    for (size_t i = 0; i < route.size(); ++i)
+    {
+        Node *next = nullptr;
+        for (Arc *arc : current->outgoings)
+        {
+            if (arc->move == route[i])
+                next = arc->next;
+        }
+        if (next == nullptr)
+            throw InvalidRoute(route[i], i);
+        current = next;
+    }
+    return current->position;
+}
+
+Lattice::Route Lattice::search(const TripPlan &trip_plan, const SearchMode &search_mode) const
+{
+    if (graph.find(trip_plan.source) == graph.end()) // check source validity
+        throw InvalidSource(trip_plan.source);
+    Node *source = graph.at(trip_plan.source);
+
+    if (graph.find(trip_plan.target) == graph.end()) // check target validity
+        throw InvalidTarget(trip_plan.target);
+    Node *target = graph.at(trip_plan.target);
+
+    Algorithm algorithm = get_algorithm(search_mode);
+    if (algorithm == nullptr)
+        throw InvalidSearchMode(search_mode);
+
+    try
+    {
+        return (this->*algorithm)(source, target);
+    }
+    catch (const std::exception &e)
+    {
+        throw;
+    }
+}
+
+Lattice::Route Lattice::super_search(const TripPlan &trip_plan,
+                                     const SearchMode &super_search_mode,
+                                     const SearchMode &sub_search_mode) const
+{
+    if (graph.find(trip_plan.source) == graph.end()) // check source validity
+        throw InvalidSource(trip_plan.source);
+    Node *source = graph.at(trip_plan.source);
+
+    if (graph.find(trip_plan.target) == graph.end()) // check target validity
+        throw InvalidTarget(trip_plan.target);
+    Node *target = graph.at(trip_plan.target);
+
+    SuperAlgorithm super_algorithm = get_super_algorithm(super_search_mode);
+    if (super_algorithm == nullptr)
+        throw InvalidSearchMode(super_search_mode);
+
+    if (source->super != target->super)
+    {
+        std::cout << "SUPER\n";
+        try
+        {
+            return (this->*super_algorithm)(source, target, sub_search_mode);
+        }
+        catch (const std::exception &e)
+        {
+            throw;
+        }
+    }
+
+    Algorithm algorithm = get_algorithm(sub_search_mode);
+    if (algorithm == nullptr)
+        throw InvalidSearchMode(sub_search_mode);
+
+    try
+    {
+        return (this->*algorithm)(source, target);
+    }
+    catch (const std::exception &e)
+    {
+        throw;
+    }
+}
+
+Lattice::Algorithm Lattice::get_algorithm(const SearchMode &search_mode) const noexcept
 {
     switch (search_mode)
     {
@@ -322,7 +410,7 @@ Lattice::Algorithm Lattice::get_algorithm(SearchMode search_mode) const noexcept
     return nullptr;
 }
 
-Lattice::SuperAlgorithm Lattice::get_super_algorithm(SearchMode search_mode) const noexcept
+Lattice::SuperAlgorithm Lattice::get_super_algorithm(const SearchMode &search_mode) const noexcept
 {
     switch (search_mode)
     {
@@ -370,73 +458,6 @@ Lattice::SuperAlgorithm Lattice::get_super_algorithm(SearchMode search_mode) con
         return &Lattice::super_bdjps;
     }
     return nullptr;
-}
-
-Lattice::Route Lattice::search(TripPlan trip_plan, SearchMode search_mode) const
-{
-    if (graph.find(trip_plan.source) == graph.end()) // check source validity
-        throw InvalidSource(trip_plan.source);
-    Node *source = graph.at(trip_plan.source);
-
-    if (graph.find(trip_plan.target) == graph.end()) // check target validity
-        throw InvalidTarget(trip_plan.target);
-    Node *target = graph.at(trip_plan.target);
-
-    Algorithm algorithm = get_algorithm(search_mode);
-    if (algorithm == nullptr)
-        throw InvalidSearchMode(search_mode);
-
-    try
-    {
-        return (this->*algorithm)(source, target);
-    }
-    catch (const std::exception &e)
-    {
-        throw;
-    }
-}
-
-Lattice::Route Lattice::super_search(TripPlan trip_plan,
-                                     SearchMode super_search_mode,
-                                     SearchMode sub_search_mode) const
-{
-    if (graph.find(trip_plan.source) == graph.end()) // check source validity
-        throw InvalidSource(trip_plan.source);
-    Node *source = graph.at(trip_plan.source);
-
-    if (graph.find(trip_plan.target) == graph.end()) // check target validity
-        throw InvalidTarget(trip_plan.target);
-    Node *target = graph.at(trip_plan.target);
-
-    SuperAlgorithm super_algorithm = get_super_algorithm(super_search_mode);
-    if (super_algorithm == nullptr)
-        throw InvalidSearchMode(super_search_mode);
-
-    if (source->super != target->super)
-    {
-        std::cout << "SUPER\n";
-        try
-        {
-            return (this->*super_algorithm)(source, target, sub_search_mode);
-        }
-        catch (const std::exception &e)
-        {
-            throw;
-        }
-    }
-
-    Algorithm algorithm = get_algorithm(sub_search_mode);
-    if (algorithm == nullptr)
-        throw InvalidSearchMode(sub_search_mode);
-
-    try
-    {
-        return (this->*algorithm)(source, target);
-    }
-    catch (const std::exception &e)
-    {
-        throw;
-    }
 }
 
 Lattice::Route Lattice::dfs(Node *source, Node *target) const
@@ -1683,7 +1704,7 @@ Lattice::Route Lattice::rjps([[maybe_unused]] Node *source, [[maybe_unused]] Nod
 Lattice::Route Lattice::bdjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
     const { return "Unfinished Algorithm"; }
 
-Lattice::Route Lattice::super_dfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_dfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -1745,7 +1766,7 @@ Lattice::Route Lattice::super_dfs(Node *source, Node *target, SearchMode sub_sea
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_rdfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_rdfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -1805,7 +1826,7 @@ Lattice::Route Lattice::super_rdfs(Node *source, Node *target, SearchMode sub_se
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bddfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -1935,7 +1956,7 @@ Lattice::Route Lattice::super_bddfs(Node *source, Node *target, SearchMode sub_s
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_bfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -1997,7 +2018,7 @@ Lattice::Route Lattice::super_bfs(Node *source, Node *target, SearchMode sub_sea
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_rbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_rbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -2057,7 +2078,7 @@ Lattice::Route Lattice::super_rbfs(Node *source, Node *target, SearchMode sub_se
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -2187,7 +2208,7 @@ Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, SearchMode sub_s
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_gbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_gbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -2256,7 +2277,7 @@ Lattice::Route Lattice::super_gbfs(Node *source, Node *target, SearchMode sub_se
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_rgbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_rgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -2325,7 +2346,7 @@ Lattice::Route Lattice::super_rgbfs(Node *source, Node *target, SearchMode sub_s
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -2468,7 +2489,7 @@ Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, SearchMode sub_
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_astar(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_astar(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -2538,7 +2559,7 @@ Lattice::Route Lattice::super_astar(Node *source, Node *target, SearchMode sub_s
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_rastar(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_rastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -2608,7 +2629,7 @@ Lattice::Route Lattice::super_rastar(Node *source, Node *target, SearchMode sub_
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdastar(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -2753,7 +2774,7 @@ Lattice::Route Lattice::super_bdastar(Node *source, Node *target, SearchMode sub
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_ngbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_ngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -2822,7 +2843,7 @@ Lattice::Route Lattice::super_ngbfs(Node *source, Node *target, SearchMode sub_s
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_rngbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_rngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -2891,7 +2912,7 @@ Lattice::Route Lattice::super_rngbfs(Node *source, Node *target, SearchMode sub_
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -3034,7 +3055,7 @@ Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, SearchMode sub
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_nastar(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_nastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -3104,7 +3125,7 @@ Lattice::Route Lattice::super_nastar(Node *source, Node *target, SearchMode sub_
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_rnastar(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_rnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super;
@@ -3174,7 +3195,7 @@ Lattice::Route Lattice::super_rnastar(Node *source, Node *target, SearchMode sub
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, SearchMode sub_search_mode) const
+Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -3320,13 +3341,13 @@ Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, SearchMode su
 }
 
 Lattice::Route Lattice::super_jps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                  [[maybe_unused]] SearchMode sub_search_mode)
+                                  [[maybe_unused]] const SearchMode &sub_search_mode)
     const { return "Unfinished Algorithm"; }
 
 Lattice::Route Lattice::super_rjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                   [[maybe_unused]] SearchMode sub_search_mode)
+                                   [[maybe_unused]] const SearchMode &sub_search_mode)
     const { return "Unfinished Algorithm"; }
 
 Lattice::Route Lattice::super_bdjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                    [[maybe_unused]] SearchMode sub_search_mode)
+                                    [[maybe_unused]] const SearchMode &sub_search_mode)
     const { return "Unfinished Algorithm"; }
