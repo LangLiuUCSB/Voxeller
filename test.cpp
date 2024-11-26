@@ -18,11 +18,11 @@ int main()
     FilePath file_path = "worlds/" + world_name + ".vox";
     log << file_path << "\n\n";
 
-    Lattice lattice;
+    Lattice L;
     X.set_hi_res_start();
     try
     {
-        lattice = Lattice(file_path);
+        L = Lattice(file_path);
     }
     catch (const std::exception &e)
     {
@@ -42,7 +42,7 @@ int main()
 
     try
     {
-        route = lattice.search(trip_plan, Lattice::BIDIRECTIONAL_GBFS);
+        route = L.search(trip_plan, Lattice::BIDIRECTIONAL_GBFS);
     }
     catch (const std::exception &e)
     {
@@ -54,14 +54,14 @@ int main()
     log << "Search time: " << X.get_us() << " microseconds\n\n";
 
     X.set_hi_res_start();
-    lattice.condense();
+    L.condense();
     X.set_hi_res_end();
     log << "Condensation time: " << X.get_us() << " microseconds\n\n";
 
     X.set_hi_res_start();
     try
     {
-        route = lattice.super_search(trip_plan, Lattice::REVERSE_A_STAR, Lattice::BIDIRECTIONAL_GBFS);
+        route = L.super_search(trip_plan, Lattice::REVERSE_A_STAR, Lattice::BIDIRECTIONAL_GBFS);
     }
     catch (const std::exception &e)
     {
