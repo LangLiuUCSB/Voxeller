@@ -1843,14 +1843,14 @@ Lattice::Route Lattice::super_rdfs(Node *source, Node *target, const SearchMode 
 Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
 {
     // search meta data
-    SuperNode *super_source = source->super, *super_target = target->super,
-              *super_current_F = super_source, *super_current_B = super_target,
+    SuperNode *super_source = source->super, *super_current_F = super_source,
+              *super_target = target->super, *super_current_B = super_target,
               **last_F = new SuperNode *[congraph.size()](),
               **last_B = new SuperNode *[congraph.size()]();
     Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
          **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()]();
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
     Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
-    entry_F[super_source->id] = source, entry_B[super_target->id] = target;
     std::stack<SuperNode *> open_set_F, open_set_B;
 
     // track initial adjacencies
@@ -1860,7 +1860,7 @@ Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode
         exit_F[super_arc->next->id] = super_arc->exit;
         entry_F[super_arc->next->id] = super_arc->link->next;
         move_F[super_arc->next->id] = super_arc->link->move;
-        open_set_F.emplace(super_arc->next);
+        open_set_F.push(super_arc->next);
     }
     for (SuperArc *super_arc : super_target->incomings) // (backwards)
     {
@@ -1868,7 +1868,7 @@ Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode
         entry_B[super_arc->next->id] = super_arc->exit;
         exit_B[super_arc->next->id] = super_arc->link->next;
         move_B[super_arc->next->id] = super_arc->link->move;
-        open_set_B.emplace(super_arc->next);
+        open_set_B.push(super_arc->next);
     }
 
     // search
@@ -1880,7 +1880,7 @@ Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode
         super_current_F = open_set_F.top(); // get entry super node (forwards)
         open_set_F.pop();
 
-        if (entry_B[super_current_F->id]) // goal check (forwards)
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -1913,7 +1913,7 @@ Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode
         super_current_B = open_set_B.top(); // get entry super node (backwards)
         open_set_B.pop();
 
-        if (entry_F[super_current_B->id] != 0) // goal check (backwards)
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -1926,7 +1926,7 @@ Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode
                 route += move_B[super_current_B->id];
                 Node *temp_entry = entry_B[super_current_B->id];
                 super_current_B = last_B[super_current_B->id];
-                route += (this->*algorithm)(temp_entry, entry_B[super_current_B->id]);
+                route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
             } while (super_current_B != super_target);
             if (super_current_B != super_source)
                 do
@@ -1950,7 +1950,7 @@ Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode
             exit_F[super_arc->next->id] = super_arc->exit;
             entry_F[super_arc->next->id] = super_arc->link->next;
             move_F[super_arc->next->id] = super_arc->link->move;
-            open_set_F.emplace(super_arc->next);
+            open_set_F.push(super_arc->next);
         }
         for (SuperArc *super_arc : super_current_B->incomings) // (backwards)
         {
@@ -1960,7 +1960,7 @@ Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode
             entry_B[super_arc->next->id] = super_arc->exit;
             exit_B[super_arc->next->id] = super_arc->link->next;
             move_B[super_arc->next->id] = super_arc->link->move;
-            open_set_B.emplace(super_arc->next);
+            open_set_B.push(super_arc->next);
         }
     }
 
@@ -2097,14 +2097,14 @@ Lattice::Route Lattice::super_rbfs(Node *source, Node *target, const SearchMode 
 Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
 {
     // search meta data
-    SuperNode *super_source = source->super, *super_target = target->super,
-              *super_current_F = super_source, *super_current_B = super_target,
+    SuperNode *super_source = source->super, *super_current_F = super_source,
+              *super_target = target->super, *super_current_B = super_target,
               **last_F = new SuperNode *[congraph.size()](),
               **last_B = new SuperNode *[congraph.size()]();
     Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
          **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()]();
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
     Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
-    entry_F[super_source->id] = source, entry_B[super_target->id] = target;
     std::queue<SuperNode *> open_set_F, open_set_B;
 
     // track initial adjacencies
@@ -2114,7 +2114,7 @@ Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode
         exit_F[super_arc->next->id] = super_arc->exit;
         entry_F[super_arc->next->id] = super_arc->link->next;
         move_F[super_arc->next->id] = super_arc->link->move;
-        open_set_F.emplace(super_arc->next);
+        open_set_F.push(super_arc->next);
     }
     for (SuperArc *super_arc : super_target->incomings) // (backwards)
     {
@@ -2122,7 +2122,7 @@ Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode
         entry_B[super_arc->next->id] = super_arc->exit;
         exit_B[super_arc->next->id] = super_arc->link->next;
         move_B[super_arc->next->id] = super_arc->link->move;
-        open_set_B.emplace(super_arc->next);
+        open_set_B.push(super_arc->next);
     }
 
     // search
@@ -2134,7 +2134,7 @@ Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode
         super_current_F = open_set_F.front(); // get entry super node (forwards)
         open_set_F.pop();
 
-        if (entry_B[super_current_F->id]) // goal check (forwards)
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -2167,7 +2167,7 @@ Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode
         super_current_B = open_set_B.front(); // get entry super node (backwards)
         open_set_B.pop();
 
-        if (entry_F[super_current_B->id] != 0) // goal check (backwards)
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -2180,7 +2180,7 @@ Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode
                 route += move_B[super_current_B->id];
                 Node *temp_entry = entry_B[super_current_B->id];
                 super_current_B = last_B[super_current_B->id];
-                route += (this->*algorithm)(temp_entry, entry_B[super_current_B->id]);
+                route += (this->*algorithm)(temp_entry, exit_B[super_current_B->id]);
             } while (super_current_B != super_target);
             if (super_current_B != super_source)
                 do
@@ -2204,7 +2204,7 @@ Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode
             exit_F[super_arc->next->id] = super_arc->exit;
             entry_F[super_arc->next->id] = super_arc->link->next;
             move_F[super_arc->next->id] = super_arc->link->move;
-            open_set_F.emplace(super_arc->next);
+            open_set_F.push(super_arc->next);
         }
         for (SuperArc *super_arc : super_current_B->incomings) // (backwards)
         {
@@ -2214,7 +2214,7 @@ Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode
             entry_B[super_arc->next->id] = super_arc->exit;
             exit_B[super_arc->next->id] = super_arc->link->next;
             move_B[super_arc->next->id] = super_arc->link->move;
-            open_set_B.emplace(super_arc->next);
+            open_set_B.push(super_arc->next);
         }
     }
 
@@ -2372,6 +2372,7 @@ Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, const SearchMod
     Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
          **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()](),
          *focus_F = source, *focus_B = target;
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
     Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
     auto heuristic_F = [&focus_B](Node *n)
     { return manhattan_distance(focus_B->position, n->position); };
@@ -2403,9 +2404,6 @@ Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, const SearchMod
         open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
     }
 
-    entry_F[super_source->id] = source;
-    exit_B[super_target->id] = target;
-
     // search
     while (true)
     {
@@ -2415,7 +2413,7 @@ Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, const SearchMod
         std::tie(super_current_F, key_F) = open_set_F.top(); // get entry super node (forwards)
         open_set_F.pop();
 
-        if (entry_B[super_current_F->id]) // goal check (forwards)
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -2447,7 +2445,7 @@ Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, const SearchMod
         std::tie(super_current_B, key_B) = open_set_B.top(); // get entry super node (backwards)
         open_set_B.pop();
 
-        if (entry_F[super_current_B->id] != 0) // goal check (backwards)
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -2655,6 +2653,7 @@ Lattice::Route Lattice::super_bdastar(Node *source, Node *target, const SearchMo
     Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
          **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()](),
          *focus_F = source, *focus_B = target;
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
     Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
     auto heuristic_F = [source, &focus_B](Node *n)
     { return manhattan_distance(source->position, n->position) +
@@ -2688,9 +2687,6 @@ Lattice::Route Lattice::super_bdastar(Node *source, Node *target, const SearchMo
         open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
     }
 
-    entry_F[super_source->id] = source;
-    exit_B[super_target->id] = target;
-
     // search
     while (true)
     {
@@ -2700,7 +2696,7 @@ Lattice::Route Lattice::super_bdastar(Node *source, Node *target, const SearchMo
         std::tie(super_current_F, key_F) = open_set_F.top(); // get entry super node (forwards)
         open_set_F.pop();
 
-        if (entry_B[super_current_F->id]) // goal check (forwards)
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -2732,7 +2728,7 @@ Lattice::Route Lattice::super_bdastar(Node *source, Node *target, const SearchMo
         std::tie(super_current_B, key_B) = open_set_B.top(); // get entry super node (backwards)
         open_set_B.pop();
 
-        if (entry_F[super_current_B->id] != 0) // goal check (backwards)
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -2938,6 +2934,7 @@ Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, const SearchMo
     Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
          **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()](),
          *focus_F = source, *focus_B = target;
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
     Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
     auto heuristic_F = [&focus_B](Node *n)
     { return manhattan_distance(focus_B->position, n->position); };
@@ -2969,9 +2966,6 @@ Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, const SearchMo
         open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
     }
 
-    entry_F[super_source->id] = source;
-    exit_B[super_target->id] = target;
-
     // search
     while (true)
     {
@@ -2981,7 +2975,7 @@ Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, const SearchMo
         std::tie(super_current_F, key_F) = open_set_F.top(); // get entry super node (forwards)
         open_set_F.pop();
 
-        if (entry_B[super_current_F->id]) // goal check (forwards)
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -3013,7 +3007,7 @@ Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, const SearchMo
         std::tie(super_current_B, key_B) = open_set_B.top(); // get entry super node (backwards)
         open_set_B.pop();
 
-        if (entry_F[super_current_B->id] != 0) // goal check (backwards)
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -3221,6 +3215,7 @@ Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchM
     Node **exit_F = new Node *[congraph.size()](), **exit_B = new Node *[congraph.size()](),
          **entry_F = new Node *[congraph.size()](), **entry_B = new Node *[congraph.size()](),
          *focus_F = source, *focus_B = target;
+    entry_F[super_source->id] = source, exit_B[super_target->id] = target;
     Move *move_F = new Move[congraph.size()](), *move_B = new Move[congraph.size()]();
     auto heuristic_F = [source, &focus_B](Node *n)
     { return manhattan_distance(source->position, n->position) +
@@ -3254,9 +3249,6 @@ Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchM
         open_set_B.emplace(super_arc->next, heuristic_B(super_arc->link->next));
     }
 
-    entry_F[super_source->id] = source;
-    exit_B[super_target->id] = target;
-
     // search
     while (true)
     {
@@ -3266,7 +3258,7 @@ Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchM
         std::tie(super_current_F, key_F) = open_set_F.top(); // get entry super node (forwards)
         open_set_F.pop();
 
-        if (entry_B[super_current_F->id]) // goal check (forwards)
+        if (entry_B[super_current_F->id] != nullptr) // goal check (forwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -3298,7 +3290,7 @@ Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchM
         std::tie(super_current_B, key_B) = open_set_B.top(); // get entry super node (backwards)
         open_set_B.pop();
 
-        if (entry_F[super_current_B->id] != 0) // goal check (backwards)
+        if (exit_F[super_current_B->id] != nullptr) // goal check (backwards)
         {
             Algorithm algorithm = get_algorithm(sub_search_mode);
             if (algorithm == nullptr)
@@ -3407,10 +3399,16 @@ bool Lattice::self_super_check(const SearchMode &super_search_mode,
     if (algorithm == nullptr)
         throw InvalidSearchMode(sub_search_mode);
 
-    for (auto &[sp, sn] : graph)
+    for (SuperNode *super1 : congraph)
     {
-        for (auto &[tp, tn] : graph)
+        if (super1->internals.size() == 2) // ignore windows in bastion
+            continue;
+        for (SuperNode *super2 : congraph)
         {
+            if (super2->internals.size() == 2) // ignore windows in bastion
+                continue;
+            Node *sn = super1->internals.front(),
+                 *tn = super2->internals.back();
             Route route;
             try
             {
@@ -3420,9 +3418,9 @@ bool Lattice::self_super_check(const SearchMode &super_search_mode,
             {
                 continue;
             }
-            if (travel(sp, route) != tp)
+            if (travel(sn->position, route) != tn->position)
             {
-                LOG << sp << tp;
+                LOG << sn->position << tn->position;
                 return false;
             }
         }
