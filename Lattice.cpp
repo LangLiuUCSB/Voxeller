@@ -3360,7 +3360,7 @@ Lattice::Route Lattice::super_bdjps([[maybe_unused]] Node *source, [[maybe_unuse
                                     [[maybe_unused]] const SearchMode &sub_search_mode)
     const { return "Unfinished Algorithm"; }
 
-bool Lattice::self_check(const SearchMode &search_mode) const
+bool Lattice::verify(const SearchMode &search_mode) const
 {
     Algorithm algorithm = get_algorithm(search_mode);
     if (algorithm == nullptr)
@@ -3388,8 +3388,8 @@ bool Lattice::self_check(const SearchMode &search_mode) const
     return true;
 }
 
-bool Lattice::self_super_check(const SearchMode &super_search_mode,
-                               const SearchMode &sub_search_mode) const
+bool Lattice::super_verify(const SearchMode &super_search_mode,
+                           const SearchMode &sub_search_mode) const
 {
     SuperAlgorithm super_algorithm = get_super_algorithm(super_search_mode);
     if (super_algorithm == nullptr)
