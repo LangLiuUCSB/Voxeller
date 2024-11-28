@@ -6,8 +6,8 @@
 struct Coordinate
 {
   int x, y, z;
-  Coordinate() noexcept : x(0), y(0), z(0) {}                                      // Default constructor
   Coordinate(const int x, const int y, const int z) noexcept : x(x), y(y), z(z) {} // Parameterized constructor
+  Coordinate() noexcept : x(0), y(0), z(0) {}                                      // Default constructor
   Coordinate(const Coordinate &) noexcept = default;                               // Copy constructor
   Coordinate(Coordinate &&) noexcept = default;                                    // Move constructor
   Coordinate &operator=(const Coordinate &) noexcept = default;                    // Copy assignment
