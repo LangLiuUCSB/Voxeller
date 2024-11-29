@@ -1,5 +1,8 @@
 #include "Lattice.hpp"
 
+#define LOG std::cout
+#define HELP std::cout << "help\n"
+
 struct Lattice::Node
 {
     id_t id;
@@ -7,13 +10,14 @@ struct Lattice::Node
     std::vector<Arc *> outgoings, incomings;
     SuperNode *super;
 
-    Node() noexcept = default;                                                              // Default constructor
-    Node(const id_t id, const Coordinate position) noexcept : id(id), position(position) {} // Parameterized constructor
-    Node(const Node &) noexcept = default;                                                  // Copy constructor
-    Node(Node &&) noexcept = default;                                                       // Move constructor
-    Node &operator=(const Node &) noexcept = default;                                       // Copy assignment
-    Node &operator=(Node &&) noexcept = default;                                            // Move assignment
-    ~Node() noexcept = default;                                                             // Default destructor
+    Node(const id_t id, const Coordinate position) noexcept
+        : id(id), position(position) {}               // Parameterized constructor
+    Node() noexcept = default;                        // Default constructor
+    Node(const Node &) noexcept = default;            // Copy constructor
+    Node(Node &&) noexcept = default;                 // Move constructor
+    Node &operator=(const Node &) noexcept = default; // Copy assignment
+    Node &operator=(Node &&) noexcept = default;      // Move assignment
+    ~Node() noexcept = default;                       // Default destructor
 };
 
 struct Lattice::Arc
@@ -21,13 +25,14 @@ struct Lattice::Arc
     Node *next;
     Move move;
 
-    Arc() noexcept = default;                                             // Default constructor
-    Arc(Node *next, const char move) noexcept : next(next), move(move) {} // Parameterized constructor
-    Arc(const Arc &) noexcept = default;                                  // Copy constructor
-    Arc(Arc &&) noexcept = default;                                       // Move constructor
-    Arc &operator=(const Arc &) noexcept = default;                       // Copy assignment
-    Arc &operator=(Arc &&) noexcept = default;                            // Move assignment
-    ~Arc() noexcept = default;                                            // Default destructor
+    Arc(Node *next, const char move) noexcept
+        : next(next), move(move) {}                 // Parameterized constructor
+    Arc() noexcept = default;                       // Default constructor
+    Arc(const Arc &) noexcept = default;            // Copy constructor
+    Arc(Arc &&) noexcept = default;                 // Move constructor
+    Arc &operator=(const Arc &) noexcept = default; // Copy assignment
+    Arc &operator=(Arc &&) noexcept = default;      // Move assignment
+    ~Arc() noexcept = default;                      // Default destructor
 };
 
 struct Lattice::SuperNode
@@ -36,8 +41,9 @@ struct Lattice::SuperNode
     std::vector<Node *> internals;
     std::vector<SuperArc *> outgoings, incomings;
 
+    SuperNode(const id_t id) noexcept
+        : id(id) {}                                             // Parameterized constructor
     SuperNode() noexcept = default;                             // Default constructor
-    SuperNode(const id_t id) noexcept : id(id) {}               // Parameterized constructor
     SuperNode(const SuperNode &) noexcept = default;            // Copy constructor
     SuperNode(SuperNode &&) noexcept = default;                 // Move constructor
     SuperNode &operator=(const SuperNode &) noexcept = default; // Copy assignment
@@ -51,10 +57,9 @@ struct Lattice::SuperArc
     Node *exit;
     Arc *link;
 
-    SuperArc() noexcept = default;                                                                 // Default constructor
-    SuperArc(SuperNode *next, Node *exit, Arc *link) noexcept : next(next), exit(exit), link(link) // Parameterized constructor
-    {
-    }
+    SuperArc(SuperNode *next, Node *exit, Arc *link) noexcept
+        : next(next), exit(exit), link(link) {}               // Parameterized constructor
+    SuperArc() noexcept = default;                            // Default constructor
     SuperArc(const SuperArc &) noexcept = default;            // Copy constructor
     SuperArc(SuperArc &&) noexcept = default;                 // Move constructor
     SuperArc &operator=(const SuperArc &) noexcept = default; // Copy assignment
@@ -453,30 +458,15 @@ Lattice::SuperAlgorithm Lattice::get_super_algorithm(const SearchMode &search_mo
 
 Lattice::Route Lattice::dfs(Node *source, Node *target) const
 {
-    if (source == target) // trivial case
-        return "";
-
-    // search meta data
     Node **last = new Node *[graph.size()]();
     Move *move = new Move[graph.size()]();
     std::stack<Node *> open_set;
 
-    // track initial adjacencies
-    for (Arc *arc : source->outgoings)
+    for (Node *current = source;; current = open_set.top(), open_set.pop())
     {
-        last[arc->next->id] = source;
-        move[arc->next->id] = arc->move;
-        open_set.push(arc->next);
-    }
-
-    // search
-    while (!open_set.empty())
-    {
-        Node *current = open_set.top(); // get entry node
-        open_set.pop();
-
         if (current == target) // goal check
         {
+            // retrace route
             Route route;
             for (; current != source; current = last[current->id])
                 route.push_back(move[current->id]);

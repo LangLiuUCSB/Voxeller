@@ -8,10 +8,6 @@
 #include <iostream>
 #include <fstream>
 
-#define LOG std::cout
-#define HELP std::cout << "help\n"
-
-using FilePath = std::string;
 class Lattice
 {
 public:
@@ -20,6 +16,7 @@ public:
     struct Arc;
     struct SuperNode;
     struct SuperArc;
+    using FilePath = std::string;
     using Move = char;
     using Route = std::string;
     using Algorithm = Route (Lattice::*)(Lattice::Node *source, Lattice::Node *target) const;
@@ -34,8 +31,8 @@ private:
     std::vector<Lattice::SuperNode *> congraph;                            // Supernode List
 
 public:
-    Lattice() noexcept = default;                           // Default constructor
     Lattice(const FilePath &file_path);                     // Parameterized constructor // todo handle bad parse
+    Lattice() noexcept = default;                           // Default constructor
     Lattice(const Lattice &) noexcept = default;            // Copy constructor
     Lattice(Lattice &&) noexcept = default;                 // Move constructor
     Lattice &operator=(const Lattice &) noexcept = default; // Copy assignment
