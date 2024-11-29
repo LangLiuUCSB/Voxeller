@@ -403,12 +403,6 @@ Lattice::Algorithm Lattice::get_algorithm(const SearchMode &search_mode) const n
         return &Lattice::rnastar;
     case BIDIRECTIONAL_NEGATIVE_A_STAR:
         return &Lattice::bdnastar;
-    case JPS:
-        return &Lattice::jps;
-    case REVERSE_JPS:
-        return &Lattice::rjps;
-    case BIDIRECTIONAL_JPS:
-        return &Lattice::bdjps;
     }
     return nullptr;
 }
@@ -453,12 +447,6 @@ Lattice::SuperAlgorithm Lattice::get_super_algorithm(const SearchMode &search_mo
         return &Lattice::super_rnastar;
     case BIDIRECTIONAL_NEGATIVE_A_STAR:
         return &Lattice::super_bdnastar;
-    case JPS:
-        return &Lattice::super_jps;
-    case REVERSE_JPS:
-        return &Lattice::super_rjps;
-    case BIDIRECTIONAL_JPS:
-        return &Lattice::super_bdjps;
     }
     return nullptr;
 }
@@ -1707,15 +1695,6 @@ Lattice::Route Lattice::bdnastar(Node *source, Node *target) const
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::jps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::rjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::bdjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target)
-    const { return "Unfinished Algorithm"; }
-
 Lattice::Route Lattice::super_dfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
@@ -1840,7 +1819,7 @@ Lattice::Route Lattice::super_rdfs(Node *source, Node *target, const SearchMode 
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+Lattice::Route Lattice::super_bddfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_current_F = super_source,
@@ -2094,7 +2073,7 @@ Lattice::Route Lattice::super_rbfs(Node *source, Node *target, const SearchMode 
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+Lattice::Route Lattice::super_bdbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_current_F = super_source,
@@ -2362,7 +2341,7 @@ Lattice::Route Lattice::super_rgbfs(Node *source, Node *target, const SearchMode
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+Lattice::Route Lattice::super_bdgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -2643,7 +2622,7 @@ Lattice::Route Lattice::super_rastar(Node *source, Node *target, const SearchMod
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+Lattice::Route Lattice::super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -2924,7 +2903,7 @@ Lattice::Route Lattice::super_rngbfs(Node *source, Node *target, const SearchMod
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+Lattice::Route Lattice::super_bdngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -3205,7 +3184,7 @@ Lattice::Route Lattice::super_rnastar(Node *source, Node *target, const SearchMo
     throw Untraversable(source->position, target->position);
 }
 
-Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const // todo bug
+Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const
 {
     // search meta data
     SuperNode *super_source = source->super, *super_target = target->super,
@@ -3347,18 +3326,6 @@ Lattice::Route Lattice::super_bdnastar(Node *source, Node *target, const SearchM
         delete[] last_B, delete[] exit_B, delete[] entry_B, delete[] move_B;
     throw Untraversable(source->position, target->position);
 }
-
-Lattice::Route Lattice::super_jps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                  [[maybe_unused]] const SearchMode &sub_search_mode)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_rjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                   [[maybe_unused]] const SearchMode &sub_search_mode)
-    const { return "Unfinished Algorithm"; }
-
-Lattice::Route Lattice::super_bdjps([[maybe_unused]] Node *source, [[maybe_unused]] Node *target,
-                                    [[maybe_unused]] const SearchMode &sub_search_mode)
-    const { return "Unfinished Algorithm"; }
 
 bool Lattice::verify(const SearchMode &search_mode) const
 {

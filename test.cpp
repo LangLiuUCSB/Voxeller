@@ -14,7 +14,7 @@ int main()
     std::string world_name;
     // log << "enter world name: ";
     // std::cin >> world_name;
-    world_name = "bastion";
+    world_name = "a";
     FilePath file_path = "worlds/" + world_name + ".vox";
     log << file_path << "\n\n";
 
@@ -37,36 +37,21 @@ int main()
     X.set_hi_res_end();
     log << "Condensation time: " << X.get_us() << " microseconds\n\n";
 
-    log << "SCC count: " << L.super_node_count() << '\n';
-
-    //! DON'T USE SELF SUPER CHECK ON STRONGLY CONNECTED COMPONENTS WITH MORE THAN 100 NODES
-
-    char i = Lattice::DFS;
-    Lattice::SearchMode mode = static_cast<Lattice::SearchMode>(i);
-    for (; i < Lattice::JPS; mode = static_cast<Lattice::SearchMode>(++i))
-    {
-        if (L.super_verify(mode, Lattice::BIDIRECTIONAL_GBFS))
-            log << int(i) << "good\n";
-        else
-            log << int(i) << "bad\n";
-    }
-    log << '\n';
-
-    const TripPlan trip_plan(Coordinate(7, 0, 9), Coordinate(4, 0, 7)); // a
+    TripPlan trip_plan(Coordinate(7, 0, 9), Coordinate(3, 0, 1));
     Lattice::Route route;
-
     X.set_hi_res_start();
     try
     {
-        route = L.super_search(trip_plan, Lattice::BIDIRECTIONAL_GBFS, Lattice::BIDIRECTIONAL_GBFS);
+        route = L.search(trip_plan, Lattice::DFS);
     }
     catch (const std::exception &e)
     {
-        route = e.what();
+        std::cerr << e.what() << '\n';
+        return EXIT_FAILURE;
     }
     X.set_hi_res_end();
-    log << "Path: " << route << ".\n";
-    log << "Search time: " << X.get_us() << " microseconds\n\n";
+    log << "Route: " << route << ".\n"
+        << "Search time: " << X.get_us() << " microseconds\n\n";
 
     log << "SUCCESS" << std::endl;
     return EXIT_SUCCESS;

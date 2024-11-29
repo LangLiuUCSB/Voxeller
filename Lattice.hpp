@@ -78,9 +78,6 @@ private:
     Route nastar(Node *source, Node *target) const;
     Route rnastar(Node *source, Node *target) const;
     Route bdnastar(Node *source, Node *target) const;
-    Route jps(Node *source, Node *target) const;
-    Route rjps(Node *source, Node *target) const;
-    Route bdjps(Node *source, Node *target) const;
 
     Route super_dfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_rdfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
@@ -100,9 +97,6 @@ private:
     Route super_nastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_rnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_bdnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_jps(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_rjps(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_bdjps(Node *source, Node *target, const SearchMode &sub_search_mode) const;
 };
 
 enum Lattice::SearchMode : char
@@ -125,9 +119,6 @@ enum Lattice::SearchMode : char
     NEGATIVE_A_STAR, // Max-Heap A* Search
     REVERSE_NEGATIVE_A_STAR,
     BIDIRECTIONAL_NEGATIVE_A_STAR,
-    JPS, // Jump Point Search
-    REVERSE_JPS,
-    BIDIRECTIONAL_JPS,
 };
 
 #endif
