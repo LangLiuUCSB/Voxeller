@@ -17,7 +17,7 @@ run: $(TARGET)
 	./test
 
 leaks: $(TARGET)
-	leaks --atExit -- ./main
+	leaks --atExit -- ./test
 
 clean:
 	rm -f $(OBJS) $(TEST_OBJS) $(TARGET) $(TEST_TARGETS)
