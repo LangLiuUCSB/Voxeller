@@ -75,12 +75,13 @@ namespace _2Ls
             ++_start;
         }
 
-        T &extract() override
+        T extract() override
         {
             if (this->_end == _start)
                 throw std::underflow_error("_2Ls::BoxQueue::extract underflow");
             return this->_data[_start++];
         }
+        void clear() noexcept override { _start = 0, this->_end = 0; }
     };
 }
 
