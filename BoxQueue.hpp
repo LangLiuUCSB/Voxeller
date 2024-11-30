@@ -39,26 +39,26 @@ namespace _2Ls
         }
         T &front() override
         {
-            if (this->_max_size == 0)
-                throw std::out_of_range("_2Ls::BoxQueue::front out of range");
+            if (this->_end - _start == 0)
+                throw std::underflow_error("_2Ls::BoxQueue::front underflow");
             return this->_data[0];
         }
         const T &front() const override
         {
-            if (this->_max_size == 0)
-                throw std::out_of_range("_2Ls::BoxQueue::front out of range");
+            if (this->_end - _start == 0)
+                throw std::underflow_error("_2Ls::BoxQueue::front underflow");
             return this->_data[0];
         }
         T &back() override
         {
-            if (this->_max_size == 0)
-                throw std::out_of_range("_2Ls::BoxQueue::back out of range");
+            if (this->_end - _start == 0)
+                throw std::underflow_error("_2Ls::BoxQueue::back underflow");
             return this->_data[this->_end - 1];
         }
         const T &back() const override
         {
-            if (this->_max_size == 0)
-                throw std::out_of_range("_2Ls::BoxQueue::back out of range");
+            if (this->_end - _start == 0)
+                throw std::underflow_error("_2Ls::BoxQueue::back underflow");
             return this->_data[this->_end - 1];
         }
 
@@ -71,14 +71,14 @@ namespace _2Ls
         void pop() override
         {
             if (this->_end == _start)
-                throw std::underflow_error("_2Ls::BoxQueue::pop overflow");
+                throw std::underflow_error("_2Ls::BoxQueue::pop underflow");
             ++_start;
         }
 
         T &extract() override
         {
             if (this->_end == _start)
-                throw std::underflow_error("_2Ls::BoxQueue::extract_top underflow");
+                throw std::underflow_error("_2Ls::BoxQueue::extract underflow");
             return this->_data[_start++];
         }
     };
