@@ -67,7 +67,7 @@ namespace _2Ls
             --this->_end;
         }
 
-        T &extract() override
+        T extract() override
         {
             if (this->_end == 0)
                 throw std::underflow_error("_2Ls::BoxStack::extract underflow");
