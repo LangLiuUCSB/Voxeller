@@ -58,26 +58,26 @@ namespace _2Ls
         }
         virtual T &front()
         {
-            if (_max_size == 0)
-                throw std::out_of_range("_2Ls::BoxArray::front out of range");
+            if (_end == 0)
+                throw std::underflow_error("_2Ls::BoxArray::front underflow");
             return _data[0];
         }
         virtual const T &front() const
         {
-            if (_max_size == 0)
-                throw std::out_of_range("_2Ls::BoxArray::front out of range");
+            if (_end == 0)
+                throw std::underflow_error("_2Ls::BoxArray::front underflow");
             return _data[0];
         }
         virtual T &back()
         {
-            if (_max_size == 0)
-                throw std::out_of_range("_2Ls::BoxArray::back out of range");
+            if (_end == 0)
+                throw std::underflow_error("_2Ls::BoxArray::back underflow");
             return _data[_end - 1];
         }
         virtual const T &back() const
         {
-            if (_max_size == 0)
-                throw std::out_of_range("_2Ls::BoxArray::back out of range");
+            if (_end == 0)
+                throw std::underflow_error("_2Ls::BoxArray::back underflow");
             return _data[_end - 1];
         }
         virtual T *data() noexcept { return _data; }
@@ -92,14 +92,14 @@ namespace _2Ls
         virtual void pop()
         {
             if (_end == 0)
-                throw std::underflow_error("_2Ls::BoxArray::pop overflow");
+                throw std::underflow_error("_2Ls::BoxArray::pop underflow");
             --_end;
         }
 
         virtual T &extract()
         {
             if (_end == 0)
-                throw std::underflow_error("_2Ls::BoxArray::extract_top underflow");
+                throw std::underflow_error("_2Ls::BoxArray::extract underflow");
             return _data[--_end];
         }
     };
