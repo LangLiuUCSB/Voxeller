@@ -96,12 +96,13 @@ namespace _2Ls
             --_end;
         }
 
-        virtual T &extract()
+        virtual T extract()
         {
             if (_end == 0)
                 throw std::underflow_error("_2Ls::BoxArray::extract underflow");
             return _data[--_end];
         }
+        virtual void clear() noexcept { _end = 0; }
     };
 }
 
