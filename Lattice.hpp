@@ -1,12 +1,14 @@
 #ifndef LATTICE_HPP
 #define LATTICE_HPP
 
+#include <iostream>
+#include <fstream>
+
 #include "Coordinate.hpp"
 #include "TripPlan.hpp"
 #include "LatticeErrors.hpp"
-
-#include <iostream>
-#include <fstream>
+#include "BoxStack.hpp"
+#include "BoxQueue.hpp"
 
 class Lattice
 {
@@ -66,12 +68,12 @@ private:
     Route gbfs(Node *source, Node *target) const;
     Route rgbfs(Node *source, Node *target) const;
     Route bdgbfs(Node *source, Node *target) const;
-    Route astar(Node *source, Node *target) const;
-    Route rastar(Node *source, Node *target) const;
-    Route bdastar(Node *source, Node *target) const;
     Route ngbfs(Node *source, Node *target) const;
     Route rngbfs(Node *source, Node *target) const;
     Route bdngbfs(Node *source, Node *target) const;
+    Route astar(Node *source, Node *target) const;
+    Route rastar(Node *source, Node *target) const;
+    Route bdastar(Node *source, Node *target) const;
     Route nastar(Node *source, Node *target) const;
     Route rnastar(Node *source, Node *target) const;
     Route bdnastar(Node *source, Node *target) const;
@@ -85,12 +87,12 @@ private:
     Route super_gbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_rgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_bdgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_astar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_rastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_ngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_rngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_bdngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_astar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_nastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_rnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_bdnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
@@ -104,15 +106,15 @@ enum Lattice::SearchMode : char
     BFS, // Breadth-First Search
     REVERSE_BFS,
     BIDIRECTIONAL_BFS,
-    GBFS, // Greedy Best-First Search
+    GBFS, // (Min-Heap) Greedy Best-First Search
     REVERSE_GBFS,
     BIDIRECTIONAL_GBFS,
-    A_STAR, // A* Search
-    REVERSE_A_STAR,
-    BIDIRECTIONAL_A_STAR,
     NEGATIVE_GBFS, // Max-Heap Greedy Best-First Search
     REVERSE_NEGATIVE_GBFS,
     BIDIRECTIONAL_NEGATIVE_GBFS,
+    A_STAR, // (Min-Heap) A* Search
+    REVERSE_A_STAR,
+    BIDIRECTIONAL_A_STAR,
     NEGATIVE_A_STAR, // Max-Heap A* Search
     REVERSE_NEGATIVE_A_STAR,
     BIDIRECTIONAL_NEGATIVE_A_STAR,
