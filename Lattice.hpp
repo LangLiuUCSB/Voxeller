@@ -4,11 +4,13 @@
 #include <iostream>
 #include <fstream>
 
+#include "Constants.hpp"
 #include "Coordinate.hpp"
 #include "TripPlan.hpp"
 #include "LatticeErrors.hpp"
-#include "BoxStack.hpp"
-#include "BoxQueue.hpp"
+// #include "BoxStack.hpp"
+// #include "BoxQueue.hpp"
+// #include "BoxBinaryHeap.hpp"
 
 class Lattice
 {
@@ -21,6 +23,7 @@ public:
     using FilePath = std::string;
     using Move = char;
     using Route = std::string;
+    class MetaData;
     using Algorithm = Route (Lattice::*)(Lattice::Node *source, Lattice::Node *target) const;
     using SuperAlgorithm = Route (Lattice::*)(Lattice::Node *source, Lattice::Node *target,
                                               const SearchMode &sub_search_mode) const;
