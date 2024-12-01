@@ -1,5 +1,8 @@
 #include <iostream>
 
+#include "BoxStack.hpp"
+#include "BoxQueue.hpp"
+#include "BoxBinaryHeap.hpp"
 #include "Chronometer.hpp"
 #include "Coordinate.hpp"
 #include "Lattice.hpp"
@@ -52,7 +55,7 @@ int main()
     }
 
     /*
-    TripPlan trip_plan(Coordinate(7, 0, 9), Coordinate(3, 0, 1));
+    TripPlan trip_plan(Coordinate(7, 0, 9), Coordinate(3, 0, 1)); // a
     Lattice::Route route;
     X.set_hi_res_start();
     try
@@ -72,3 +75,4 @@ int main()
     log << "SUCCESS" << std::endl;
     return EXIT_SUCCESS;
 }
+// LLVM C++ Style Guide Ruler 100 -----------------------------------------------------------------|
