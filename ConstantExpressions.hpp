@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_HPP
-#define CONSTANTS_HPP
+#ifndef CONSTANTEXPRESSIONS_HPP
+#define CONSTANTEXPRESSIONS_HPP
 
 constexpr char mask_bits[] = {0b1000, 0b0100, 0b0010, 0b0001};
 
