@@ -8,41 +8,17 @@ namespace _2Ls
     template <typename T, typename Comparator = std::less<T>>
     class BoxBinaryHeap : public BoxArray<T>
     {
+    protected:
         Comparator _cmp;
 
-        void heapify_up(size_t current)
-        {
-            for (size_t parent; current != 0; current = parent)
-            {
-                parent = (current - 1) / 2;
-                if (!_cmp(this->_data[parent], this->_data[current]))
-                    break;
-                std::swap(this->_data[parent], this->_data[current]);
-            }
-        }
-        void heapify_down(size_t current)
-        {
-            for (size_t left, right, priority = current;; current = priority)
-            {
-                left = 2 * current + 1, right = left + 1;
-                if (left < this->_end && _cmp(this->_data[priority], this->_data[left]))
-                    priority = left;
-                if (right < this->_end && _cmp(this->_data[priority], this->_data[right]))
-                    priority = right;
-                if (priority == current)
-                    break;
-                std::swap(this->_data[current], this->_data[priority]);
-            }
-        }
-
     public:
-        BoxBinaryHeap(size_t size, Comparator cmp = Comparator()) : BoxArray<T>(size), _cmp(cmp) {} // Parameterized constructor
-        BoxBinaryHeap() noexcept = default;                                                         // Default constructor
-        BoxBinaryHeap(const BoxBinaryHeap &) noexcept = default;                                    // Copy constructor
-        BoxBinaryHeap(BoxBinaryHeap &&) noexcept = default;                                         // Move constructor
-        BoxBinaryHeap &operator=(const BoxBinaryHeap &) noexcept = default;                         // Copy assignment
-        BoxBinaryHeap &operator=(BoxBinaryHeap &&) noexcept = default;                              // Move assignment
-        ~BoxBinaryHeap() noexcept = default;                                                        // Default destructor
+        BoxBinaryHeap(const size_t &size = 0, T data[] = nullptr)
+            : BoxArray<T>(size, data), _cmp(Comparator()) {}                // Parameterized constructor
+        BoxBinaryHeap(const BoxBinaryHeap &) noexcept = default;            // Copy constructor
+        BoxBinaryHeap(BoxBinaryHeap &&) noexcept = default;                 // Move constructor
+        BoxBinaryHeap &operator=(const BoxBinaryHeap &) noexcept = default; // Copy assignment
+        BoxBinaryHeap &operator=(BoxBinaryHeap &&) noexcept = default;      // Move assignment
+        ~BoxBinaryHeap() noexcept = default;                                // Default destructor
 
         T &at(const size_t &index) override
         {
@@ -104,6 +80,33 @@ namespace _2Ls
             this->_data[0] = std::move(this->_data[--this->_end]);
             heapify_down(0);
             return temp;
+        }
+
+    protected:
+        void heapify_up(size_t current)
+        {
+            for (size_t parent; current != 0; current = parent)
+            {
+                parent = (current - 1) / 2;
+                if (!_cmp(this->_data[parent], this->_data[current]))
+                    break;
+                std::swap(this->_data[parent], this->_data[current]);
+            }
+        }
+        void heapify_down(size_t current)
+        {
+            for (size_t left, right, priority = current;; current = priority)
+            {
+                if ((left = 2 * current + 1) < this->_end &&
+                    _cmp(this->_data[left], this->_data[priority]))
+                    priority = left;
+                if ((right = left + 1) < this->_end &&
+                    _cmp(this->_data[right], this->_data[priority]))
+                    priority = right;
+                if (priority == current)
+                    break;
+                std::swap(this->_data[current], this->_data[priority]);
+            }
         }
     };
 }
