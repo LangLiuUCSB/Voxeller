@@ -1,17 +1,17 @@
 #ifndef LATTICE_HPP
 #define LATTICE_HPP
 
-#include "Coordinate.hpp"
-#include "TripPlan.hpp"
-#include "LatticeErrors.hpp"
-
 #include <iostream>
 #include <fstream>
 
-#define LOG std::cout
-#define HELP std::cout << "help\n"
+#include "Constants.hpp"
+#include "Coordinate.hpp"
+#include "TripPlan.hpp"
+#include "LatticeErrors.hpp"
+// #include "BoxStack.hpp"
+// #include "BoxQueue.hpp"
+// #include "BoxBinaryHeap.hpp"
 
-using FilePath = std::string;
 class Lattice
 {
 public:
@@ -20,8 +20,10 @@ public:
     struct Arc;
     struct SuperNode;
     struct SuperArc;
+    using FilePath = std::string;
     using Move = char;
     using Route = std::string;
+    class MetaData;
     using Algorithm = Route (Lattice::*)(Lattice::Node *source, Lattice::Node *target) const;
     using SuperAlgorithm = Route (Lattice::*)(Lattice::Node *source, Lattice::Node *target,
                                               const SearchMode &sub_search_mode) const;
@@ -34,8 +36,8 @@ private:
     std::vector<Lattice::SuperNode *> congraph;                            // Supernode List
 
 public:
-    Lattice() noexcept = default;                           // Default constructor
     Lattice(const FilePath &file_path);                     // Parameterized constructor // todo handle bad parse
+    Lattice() noexcept = default;                           // Default constructor
     Lattice(const Lattice &) noexcept = default;            // Copy constructor
     Lattice(Lattice &&) noexcept = default;                 // Move constructor
     Lattice &operator=(const Lattice &) noexcept = default; // Copy assignment
@@ -69,12 +71,12 @@ private:
     Route gbfs(Node *source, Node *target) const;
     Route rgbfs(Node *source, Node *target) const;
     Route bdgbfs(Node *source, Node *target) const;
-    Route astar(Node *source, Node *target) const;
-    Route rastar(Node *source, Node *target) const;
-    Route bdastar(Node *source, Node *target) const;
     Route ngbfs(Node *source, Node *target) const;
     Route rngbfs(Node *source, Node *target) const;
     Route bdngbfs(Node *source, Node *target) const;
+    Route astar(Node *source, Node *target) const;
+    Route rastar(Node *source, Node *target) const;
+    Route bdastar(Node *source, Node *target) const;
     Route nastar(Node *source, Node *target) const;
     Route rnastar(Node *source, Node *target) const;
     Route bdnastar(Node *source, Node *target) const;
@@ -88,12 +90,12 @@ private:
     Route super_gbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_rgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_bdgbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_astar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_rastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
-    Route super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_ngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_rngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_bdngbfs(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_astar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_rastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
+    Route super_bdastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_nastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_rnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
     Route super_bdnastar(Node *source, Node *target, const SearchMode &sub_search_mode) const;
@@ -107,15 +109,15 @@ enum Lattice::SearchMode : char
     BFS, // Breadth-First Search
     REVERSE_BFS,
     BIDIRECTIONAL_BFS,
-    GBFS, // Greedy Best-First Search
+    GBFS, // (Min-Heap) Greedy Best-First Search
     REVERSE_GBFS,
     BIDIRECTIONAL_GBFS,
-    A_STAR, // A* Search
-    REVERSE_A_STAR,
-    BIDIRECTIONAL_A_STAR,
     NEGATIVE_GBFS, // Max-Heap Greedy Best-First Search
     REVERSE_NEGATIVE_GBFS,
     BIDIRECTIONAL_NEGATIVE_GBFS,
+    A_STAR, // (Min-Heap) A* Search
+    REVERSE_A_STAR,
+    BIDIRECTIONAL_A_STAR,
     NEGATIVE_A_STAR, // Max-Heap A* Search
     REVERSE_NEGATIVE_A_STAR,
     BIDIRECTIONAL_NEGATIVE_A_STAR,

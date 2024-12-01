@@ -14,7 +14,7 @@ int main()
     std::string world_name;
     // log << "enter world name: ";
     // std::cin >> world_name;
-    world_name = "junk";
+    world_name = "a";
     std::string file_path = "worlds/" + world_name + ".vox";
     log << file_path << "\n\n";
 
@@ -39,19 +39,14 @@ int main()
 
     char i = Lattice::DFS;
     Lattice::SearchMode mode = static_cast<Lattice::SearchMode>(i);
-    for (; i <= Lattice::BIDIRECTIONAL_NEGATIVE_A_STAR; mode = static_cast<Lattice::SearchMode>(++i))
+    for (; i < 6; mode = static_cast<Lattice::SearchMode>(++i))
     {
-        // X.set_hi_res_start();
-        bool valid = L.verify(mode);
-        // X.set_hi_res_end();
-        // log << "Verification time: " << X.get_us() << " microseconds\n\n";
-        if (valid)
+        if (L.verify(mode))
             log << int(i) << "good\n";
         else
             log << int(i) << "bad\n";
     }
 
-    /*
     TripPlan trip_plan(Coordinate(7, 0, 9), Coordinate(3, 0, 1));
     Lattice::Route route;
     X.set_hi_res_start();
@@ -67,7 +62,6 @@ int main()
     X.set_hi_res_end();
     log << "Route: " << route << ".\n"
         << "Search time: " << X.get_us() << " microseconds\n\n";
-    */
 
     log << "SUCCESS" << std::endl;
     return EXIT_SUCCESS;
