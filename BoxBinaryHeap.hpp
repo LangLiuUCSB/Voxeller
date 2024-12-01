@@ -14,6 +14,7 @@ namespace _2Ls
     public:
         BoxBinaryHeap(const size_t &size = 0, T data[] = nullptr)
             : BoxArray<T>(size, data), _cmp(Comparator()) {}                // Parameterized constructor
+        BoxBinaryHeap(std::initializer_list<T> init) : BoxArray<T>(init) {} // Initializer-List constructor
         BoxBinaryHeap(const BoxBinaryHeap &) noexcept = default;            // Copy constructor
         BoxBinaryHeap(BoxBinaryHeap &&) noexcept = default;                 // Move constructor
         BoxBinaryHeap &operator=(const BoxBinaryHeap &) noexcept = default; // Copy assignment
@@ -87,8 +88,7 @@ namespace _2Ls
         {
             for (size_t parent; current != 0; current = parent)
             {
-                parent = (current - 1) / 2;
-                if (!_cmp(this->_data[parent], this->_data[current]))
+                if (!_cmp(this->_data[parent = (current - 1) / 2], this->_data[current]))
                     break;
                 std::swap(this->_data[parent], this->_data[current]);
             }

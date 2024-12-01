@@ -18,11 +18,15 @@ namespace _2Ls
     public:
         BoxArray(const size_t &size = 0, T data[] = nullptr) noexcept
             : _max_size(size), _data(data ? data : new T[size]) {} // Parameterized constructor
-        BoxArray(const BoxArray &) noexcept = default;             // Copy constructor
-        BoxArray(BoxArray &&) noexcept = default;                  // Move constructor
-        BoxArray &operator=(const BoxArray &) noexcept = default;  // Copy assignment
-        BoxArray &operator=(BoxArray &&) noexcept = default;       // Move assignment
-        virtual ~BoxArray() { delete[] _data; }                    // Default destructor
+        BoxArray(std::initializer_list<T> init)
+            : _data(new T[init.size()]),
+              _max_size(init.size()),
+              _end(init.size()) { std::copy(init.begin(), init.end(), _data.get()); } // Initializer-List constructor
+        BoxArray(const BoxArray &) noexcept = default;                                // Copy constructor
+        BoxArray(BoxArray &&) noexcept = default;                                     // Move constructor
+        BoxArray &operator=(const BoxArray &) noexcept = default;                     // Copy assignment
+        BoxArray &operator=(BoxArray &&) noexcept = default;                          // Move assignment
+        virtual ~BoxArray() { delete[] _data; }                                       // Default destructor
 
         virtual T *begin() noexcept { return _data; }
         virtual const T *begin() const noexcept { return _data; }

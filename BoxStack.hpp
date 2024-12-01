@@ -10,12 +10,13 @@ namespace _2Ls
     {
     public:
         BoxStack(const size_t &size = 0, T data[] = nullptr)
-            : BoxArray<T>(size, data) {}                          // Parameterized constructor
-        BoxStack(const BoxStack &) noexcept = default;            // Copy constructor
-        BoxStack(BoxStack &&) noexcept = default;                 // Move constructor
-        BoxStack &operator=(const BoxStack &) noexcept = default; // Copy assignment
-        BoxStack &operator=(BoxStack &&) noexcept = default;      // Move assignment
-        ~BoxStack() noexcept = default;                           // Default destructor
+            : BoxArray<T>(size, data) {}                               // Parameterized constructor
+        BoxStack(std::initializer_list<T> init) : BoxArray<T>(init) {} // Initializer-List constructor
+        BoxStack(const BoxStack &) noexcept = default;                 // Copy constructor
+        BoxStack(BoxStack &&) noexcept = default;                      // Move constructor
+        BoxStack &operator=(const BoxStack &) noexcept = default;      // Copy assignment
+        BoxStack &operator=(BoxStack &&) noexcept = default;           // Move assignment
+        ~BoxStack() noexcept = default;                                // Default destructor
 
         T &at(const size_t &index) override
         {
