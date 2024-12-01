@@ -13,12 +13,13 @@ namespace _2Ls
 
     public:
         BoxQueue(const size_t &size = 0, T data[] = nullptr)
-            : BoxArray<T>(size, data) {}                          // Parameterized constructor
-        BoxQueue(const BoxQueue &) noexcept = default;            // Copy constructor
-        BoxQueue(BoxQueue &&) noexcept = default;                 // Move constructor
-        BoxQueue &operator=(const BoxQueue &) noexcept = default; // Copy assignment
-        BoxQueue &operator=(BoxQueue &&) noexcept = default;      // Move assignment
-        ~BoxQueue() noexcept = default;                           // Default destructor
+            : BoxArray<T>(size, data) {}                               // Parameterized constructor
+        BoxQueue(std::initializer_list<T> init) : BoxArray<T>(init) {} // Initializer-List constructor
+        BoxQueue(const BoxQueue &) noexcept = default;                 // Copy constructor
+        BoxQueue(BoxQueue &&) noexcept = default;                      // Move constructor
+        BoxQueue &operator=(const BoxQueue &) noexcept = default;      // Copy assignment
+        BoxQueue &operator=(BoxQueue &&) noexcept = default;           // Move assignment
+        ~BoxQueue() noexcept = default;                                // Default destructor
 
         T *begin() noexcept override { return this->_data + _start; }
         const T *begin() const noexcept override { return this->_data + _start; }
