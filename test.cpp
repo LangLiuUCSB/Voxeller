@@ -1,9 +1,9 @@
+#include <iostream>
+
 #include "Chronometer.hpp"
 #include "Coordinate.hpp"
 #include "Lattice.hpp"
 #include "TripPlan.hpp"
-
-#include <iostream>
 
 // LLVM C++ Style Guide Ruler 100 -----------------------------------------------------------------|
 int main()
@@ -14,8 +14,8 @@ int main()
     std::string world_name;
     // log << "enter world name: ";
     // std::cin >> world_name;
-    world_name = "a";
-    FilePath file_path = "worlds/" + world_name + ".vox";
+    world_name = "junk";
+    std::string file_path = "worlds/" + world_name + ".vox";
     log << file_path << "\n\n";
 
     Lattice L;
@@ -37,6 +37,21 @@ int main()
     X.set_hi_res_end();
     log << "Condensation time: " << X.get_us() << " microseconds\n\n";
 
+    char i = Lattice::DFS;
+    Lattice::SearchMode mode = static_cast<Lattice::SearchMode>(i);
+    for (; i <= Lattice::BIDIRECTIONAL_NEGATIVE_A_STAR; mode = static_cast<Lattice::SearchMode>(++i))
+    {
+        // X.set_hi_res_start();
+        bool valid = L.verify(mode);
+        // X.set_hi_res_end();
+        // log << "Verification time: " << X.get_us() << " microseconds\n\n";
+        if (valid)
+            log << int(i) << "good\n";
+        else
+            log << int(i) << "bad\n";
+    }
+
+    /*
     TripPlan trip_plan(Coordinate(7, 0, 9), Coordinate(3, 0, 1));
     Lattice::Route route;
     X.set_hi_res_start();
@@ -52,6 +67,7 @@ int main()
     X.set_hi_res_end();
     log << "Route: " << route << ".\n"
         << "Search time: " << X.get_us() << " microseconds\n\n";
+    */
 
     log << "SUCCESS" << std::endl;
     return EXIT_SUCCESS;
