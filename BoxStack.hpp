@@ -9,8 +9,8 @@ namespace _2Ls
     class BoxStack : public BoxArray<T>
     {
     public:
-        BoxStack(size_t size) : BoxArray<T>(size) {}              // Parameterized constructor
-        BoxStack() noexcept = default;                            // Default constructor
+        BoxStack(const size_t &size = 0, T data[] = nullptr)
+            : BoxArray<T>(size, data) {}                          // Parameterized constructor
         BoxStack(const BoxStack &) noexcept = default;            // Copy constructor
         BoxStack(BoxStack &&) noexcept = default;                 // Move constructor
         BoxStack &operator=(const BoxStack &) noexcept = default; // Copy assignment
